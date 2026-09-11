@@ -1,5 +1,5 @@
 <script setup lang="ts">
-withDefaults(
+const props = withDefaults(
   defineProps<{
     variant?: 'primary' | 'ghost' | 'danger'
     disabled?: boolean
@@ -8,67 +8,33 @@ withDefaults(
   }>(),
   { variant: 'primary', disabled: false, block: false, size: 'md' },
 )
+
+const sizeClasses: Record<string, string> = {
+  sm: 'px-2.5 py-1.5 text-[11px]',
+  md: 'px-4 py-2.5 text-sm',
+  lg: 'px-[22px] py-3.5 text-lg',
+}
+const variantClasses: Record<string, string> = {
+  primary: 'text-[#10121b] [--btn:var(--theme,#ff5a4d)] [--btn-deep:var(--theme-deep,#b32d2d)]',
+  ghost: 'text-ink [--btn:var(--color-panel-2)] [--btn-deep:var(--theme-deep,#b32d2d)]',
+  danger: 'text-white [--btn:var(--color-red)] [--btn-deep:var(--color-red-deep)]',
+}
 </script>
 
 <template>
   <button
-    class="pbtn"
-    :class="[`v-${variant}`, `s-${size}`, { block, disabled }]"
+    class="relative border-[3px] border-shadow bg-[var(--btn)] font-bold uppercase tracking-wide shadow-[0_4px_0_var(--btn-deep),0_6px_0_var(--color-shadow)] transition-[transform,box-shadow] duration-75 [image-rendering:pixelated]"
+    :class="[
+      sizeClasses[props.size],
+      variantClasses[props.variant],
+      props.block ? 'block w-full' : '',
+      props.disabled
+        ? 'cursor-not-allowed opacity-45 grayscale-[0.5]'
+        : 'cursor-pointer active:translate-y-1 active:shadow-[0_0_0_var(--btn-deep),0_2px_0_var(--color-shadow)]',
+    ]"
     :disabled="disabled"
     type="button"
   >
-    <span class="label"><slot /></span>
+    <span><slot /></span>
   </button>
 </template>
-
-<style scoped>
-.pbtn {
-  --btn: var(--theme, #ff5a4d);
-  --btn-deep: var(--theme-deep, #b32d2d);
-  position: relative;
-  border: 3px solid var(--c-shadow);
-  background: var(--btn);
-  color: #10121b;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  box-shadow: 0 4px 0 var(--btn-deep), 0 6px 0 var(--c-shadow);
-  transition: transform 0.05s, box-shadow 0.05s;
-  text-transform: uppercase;
-  image-rendering: pixelated;
-}
-.s-sm {
-  padding: 6px 10px;
-  font-size: 11px;
-}
-.s-md {
-  padding: 10px 16px;
-  font-size: 14px;
-}
-.s-lg {
-  padding: 14px 22px;
-  font-size: 18px;
-}
-.block {
-  display: block;
-  width: 100%;
-}
-.pbtn:not(.disabled):active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 var(--btn-deep), 0 2px 0 var(--c-shadow);
-}
-.v-ghost {
-  --btn: var(--c-panel-2);
-  color: var(--c-ink);
-}
-.v-danger {
-  --btn: var(--c-red);
-  --btn-deep: var(--c-red-deep);
-  color: #fff;
-}
-.disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(0.5);
-}
-</style>

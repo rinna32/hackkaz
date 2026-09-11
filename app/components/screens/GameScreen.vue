@@ -8,10 +8,11 @@ const store = useGameStore()
 
 const multClass = computed(() => {
   const m = store.displayMultiplier
-  if (m < 1) return 'c-black'
-  if (m < 2) return 'c-yellow'
-  if (m < 3) return 'c-yellow hot'
-  return 'c-yellow hot big'
+  if (m < 1) return 'text-[#111]'
+  if (m < 2) return 'text-yellow [text-shadow:0_3px_0_var(--color-shadow)]'
+  const glow = '[text-shadow:0_0_12px_var(--color-yellow),0_3px_0_var(--color-shadow)]'
+  if (m < 3) return `text-yellow-hot ${glow}`
+  return `text-yellow-hot text-[58px] ${glow}`
 })
 
 // Живые очки за раунд (оценка для HUD)
@@ -48,231 +49,95 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="screen" :class="`theme-${store.theme}`">
+  <div class="flex h-full flex-col" :class="`theme-${store.theme}`">
     <BalanceBar />
 
-    <div class="stage">
+    <div class="relative flex-1 overflow-hidden bg-black">
       <GameCanvas />
 
       <!-- HUD поверх канваса -->
-      <div class="hud">
-        <div class="mult-wrap">
-          <div class="mult" :class="multClass" data-testid="multiplier">
+      <div class="pointer-events-none absolute inset-0 flex flex-col p-2.5">
+        <div class="mt-1.5 text-center">
+          <div
+            class="text-[40px] font-bold leading-none transition-[font-size] duration-150"
+            :class="multClass"
+            data-testid="multiplier"
+          >
             ×{{ store.displayMultiplier.toFixed(2) }}
           </div>
-          <div v-if="store.boosterActive" class="booster-tag" data-testid="booster-active">
+          <div
+            v-if="store.boosterActive"
+            class="mt-1 inline-block animate-bpop border-2 border-shadow bg-yellow-hot px-2 py-0.5 text-xs font-bold text-[#10121b]"
+            data-testid="booster-active"
+          >
             БУСТЕР ×{{ store.round?.boosterTier }}!
           </div>
         </div>
 
         <!-- всплывающие очки -->
-        <div class="floaters">
+        <div class="relative flex-1">
           <transition-group name="floater">
-            <div v-for="f in store.floaters" :key="f.id" class="floater">{{ f.text }}</div>
+            <div
+              v-for="f in store.floaters"
+              :key="f.id"
+              class="absolute left-1/2 top-[30%] -translate-x-1/2 text-lg font-bold text-yellow-hot [text-shadow:0_2px_0_var(--color-shadow)]"
+            >
+              {{ f.text }}
+            </div>
           </transition-group>
         </div>
 
-        <div class="bottom">
-          <div class="winbox" data-testid="live-win">
-            <span class="l">Выигрыш</span>
-            <span class="v">{{ store.liveWinnings }} <small>бонусов</small></span>
-            <span class="pts">{{ livePoints }} очков</span>
+        <div class="mt-auto flex items-end justify-between gap-2.5">
+          <div
+            class="pointer-events-none flex flex-col border-2 border-shadow bg-[rgba(16,18,27,0.82)] px-2.5 py-2 leading-[1.3]"
+            data-testid="live-win"
+          >
+            <span class="text-[11px] text-ink-dim">Выигрыш</span>
+            <span class="text-lg font-bold text-yellow"
+              >{{ store.liveWinnings }} <small class="text-[10px] text-ink-dim">бонусов</small></span
+            >
+            <span class="text-[11px] text-green">{{ livePoints }} очков</span>
           </div>
 
-          <div class="cashout-area">
-            <div v-if="store.showOnboarding" class="onboard" data-testid="onboarding">
+          <div class="pointer-events-auto relative">
+            <div
+              v-if="store.showOnboarding"
+              class="absolute bottom-full right-0 mb-2 w-[190px] animate-bob border-2 border-shadow bg-yellow px-2.5 py-[7px] text-xs font-bold text-[#10121b]"
+              data-testid="onboarding"
+            >
               Нажми «Забрать» до того, как шар лопнет ↓
             </div>
             <PixelButton
               variant="danger"
               size="lg"
-              class="cashout"
+              class="min-w-[140px]"
               :disabled="!store.canCashout"
               data-testid="cashout-btn"
               @click="store.cashout()"
             >
               {{ store.cashoutInfo ? `Забрано ×${store.cashoutInfo.exitMultiplier.toFixed(2)}` : 'Забрать' }}
             </PixelButton>
-            <div v-if="store.cashoutInfo" class="more" data-testid="could-more">
-              Могли бы забрать больше — шар ещё летит!
-            </div>
           </div>
         </div>
       </div>
 
-      <div v-if="boostFlash" class="flash" />
+      <div v-if="boostFlash" class="pointer-events-none absolute inset-0 animate-fade-out bg-yellow-hot opacity-35" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.screen {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-.stage {
-  position: relative;
-  flex: 1;
-  overflow: hidden;
-  background: #000;
-}
-.hud {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  pointer-events: none;
-  padding: 10px;
-}
-.mult-wrap {
-  text-align: center;
-  margin-top: 6px;
-}
-.mult {
-  font-size: 40px;
-  font-weight: 700;
-  line-height: 1;
-  transition: font-size 0.15s;
-  text-shadow: 0 3px 0 var(--c-shadow);
-}
-.c-black {
-  color: #111;
-}
-.c-yellow {
-  color: var(--c-yellow);
-}
-.c-yellow.hot {
-  color: var(--c-yellow-hot);
-  text-shadow: 0 0 12px var(--c-yellow), 0 3px 0 var(--c-shadow);
-}
-.c-yellow.hot.big {
-  font-size: 58px;
-}
-.booster-tag {
-  margin-top: 4px;
-  display: inline-block;
-  color: #10121b;
-  background: var(--c-yellow-hot);
-  padding: 3px 8px;
-  font-weight: 700;
-  font-size: 12px;
-  border: 2px solid var(--c-shadow);
-  animation: bpop 0.4s;
-}
-@keyframes bpop {
-  0% {
-    transform: scale(0.5);
-  }
-  60% {
-    transform: scale(1.2);
-  }
-}
-.floaters {
-  flex: 1;
-  position: relative;
-}
-.floater {
-  position: absolute;
-  left: 50%;
-  top: 30%;
-  transform: translateX(-50%);
-  color: var(--c-yellow-hot);
-  font-weight: 700;
-  font-size: 18px;
-  text-shadow: 0 2px 0 var(--c-shadow);
-}
+@reference '~/assets/styles/main.css';
+
 .floater-enter-active {
-  transition: all 1.1s ease-out;
+  @apply transition-all duration-[1100ms] ease-out;
 }
 .floater-enter-from {
-  opacity: 1;
+  @apply opacity-100;
 }
 .floater-leave-to,
 .floater-enter-to {
   opacity: 0;
   transform: translate(-50%, -60px);
-}
-.bottom {
-  margin-top: auto;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-}
-.winbox {
-  pointer-events: none;
-  background: rgba(16, 18, 27, 0.82);
-  border: 2px solid var(--c-shadow);
-  padding: 6px 8px;
-  line-height: 1.2;
-  display: flex;
-  flex-direction: column;
-}
-.winbox .l {
-  font-size: 8px;
-  color: var(--c-ink-dim);
-}
-.winbox .v {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--c-yellow);
-}
-.winbox .v small {
-  font-size: 8px;
-  color: var(--c-ink-dim);
-}
-.winbox .pts {
-  font-size: 9px;
-  color: var(--c-green);
-}
-.cashout-area {
-  position: relative;
-  pointer-events: auto;
-}
-.cashout {
-  min-width: 140px;
-}
-.onboard {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 8px;
-  width: 180px;
-  background: var(--c-yellow);
-  color: #10121b;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 6px 8px;
-  border: 2px solid var(--c-shadow);
-  animation: bob 0.8s infinite alternate;
-}
-@keyframes bob {
-  to {
-    transform: translateY(4px);
-  }
-}
-.more {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 8px;
-  width: 160px;
-  font-size: 10px;
-  color: var(--c-yellow-hot);
-  text-align: right;
-}
-.flash {
-  position: absolute;
-  inset: 0;
-  background: var(--c-yellow-hot);
-  opacity: 0.35;
-  pointer-events: none;
-  animation: fade 0.5s forwards;
-}
-@keyframes fade {
-  to {
-    opacity: 0;
-  }
 }
 </style>

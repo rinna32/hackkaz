@@ -12,7 +12,11 @@ function px(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
 
 /**
  * Воздушный шар с корзиной. Центр — (cx, cy) на уровне корзины.
- * scale — целочисленный пиксель-размер (2 = каждый «пиксель» 2×2 внутри спрайта).
+ *
+ * Купол рисуется процедурно (не по ASCII-маске): цвет каждого блока считается по
+ * расстоянию/углу до центра сферы, за счёт чего получается плавный объёмный
+ * градиент, вертикальные швы-панели («гoры») классического шара и блик —
+ * значительно детальнее старой 16×16 маски в 3 плоских тона.
  */
 export function drawBalloon(
   ctx: CanvasRenderingContext2D,
@@ -21,52 +25,98 @@ export function drawBalloon(
   pal: ThemePalette,
   sway = 0,
 ) {
-  const s = 2 // размер условного пикселя внутри спрайта
+  const block = 2 // размер условного пикселя
   const ox = Math.round(cx + sway)
   const oy = Math.round(cy)
 
-  // Оболочка шара (16x16 условных пикселей), рисуем по строкам маской
-  // 0 = пусто, 1 = основной, 2 = тень, 3 = блик
-  const dome = [
-    '0001111111110000',
-    '0011111111111000',
-    '0111112111113100',
-    '1111112111111310',
-    '1111122111111131',
-    '1111222111111113',
-    '1112221111111113',
-    '1122211111111113',
-    '1122111111111113',
-    '1122111111111131',
-    '0112111111111310',
-    '0111211111113100',
-    '0011111111111000',
-    '0001111111110000',
-    '0000111111100000',
-    '0000011111000000',
-  ]
-  const w = dome[0]!.length
-  const startX = ox - (w * s) / 2
-  const startY = oy - w * s - 8 * s
-  for (let row = 0; row < dome.length; row++) {
-    const line = dome[row]!
-    for (let col = 0; col < line.length; col++) {
-      const ch = line[col]
-      if (ch === '0') continue
-      const color = ch === '2' ? pal.balloonDark : ch === '3' ? pal.balloonLight : pal.balloonMain
-      px(ctx, startX + col * s, startY + row * s, s, s, color)
+  // --- геометрия: корзина внизу, шея-переход, купол сверху ---
+  const bw = 7 * block
+  const bh = 6 * block
+  const basketTop = oy - bh
+  const neckY = basketTop - 5 * block
+  const R = 11 * block // радиус купола
+  const domeCenterY = neckY - R * 0.72 // купол слегка «сидит» на шее, не идеальный круг
+
+  // Направление света (сверху слева) — определяет блик и затенение.
+  const lightAngle = -2.35
+  const lx = Math.cos(lightAngle)
+  const ly = Math.sin(lightAngle)
+  const gores = 8 // число вертикальных панелей купола
+
+  for (let dy = -R; dy <= R; dy += block) {
+    for (let dx = -R; dx <= R; dx += block) {
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist > R) continue
+      // слегка сплющиваем низ купола, чтобы он плавно сужался к шее
+      if (dy > R * 0.55 && Math.abs(dx) > (R - dy) * 1.3) continue
+
+      const nx = dx / R
+      const ny = dy / R
+      let shade = nx * lx + ny * ly // -1..1
+      shade = (shade + 1) / 2 // 0..1
+
+      const angle = Math.atan2(dy, dx)
+      const goreT = (((angle + Math.PI) / (Math.PI * 2)) * gores) % 1
+      const seam = (goreT < 0.05 || goreT > 0.95) && dist > R * 0.3
+
+      let color: string
+      if (seam) color = pal.balloonDark
+      else if (shade > 0.74) color = pal.balloonLight
+      else if (shade > 0.3) color = pal.balloonMain
+      else color = pal.balloonDark
+
+      px(ctx, ox + dx, domeCenterY + dy, block, block, color)
     }
   }
 
-  // Стропы
-  px(ctx, ox - 4 * s, startY + dome.length * s, s, 4 * s, pal.balloonDark)
-  px(ctx, ox + 3 * s, startY + dome.length * s, s, 4 * s, pal.balloonDark)
+  // Точечный блик (глянец) в стороне света.
+  const hlx = ox + lx * R * 0.45
+  const hly = domeCenterY + ly * R * 0.45
+  px(ctx, hlx - block, hly - block, block * 2, block * 2, '#ffffff')
 
-  // Корзина (6x5)
-  const bw = 6 * s
-  const bh = 5 * s
-  px(ctx, ox - bw / 2, oy - bh, bw, bh, pal.basket)
-  px(ctx, ox - bw / 2, oy - bh, bw, s, '#a06a34') // светлый край
+  // Шея — переход купола в стропы.
+  px(ctx, ox - 2 * block, neckY - 2 * block, 4 * block, 4 * block, pal.balloonDark)
+
+  // Стропы (4 шт., веерами к углам корзины) — светлее одной сплошной линии.
+  const ropeTopY = neckY + 2 * block
+  const ropeBottomY = basketTop
+  const ropeOffsets = [-3 * block, -1 * block, block, 3 * block]
+  for (const offX of ropeOffsets) {
+    const bottomX = ox + offX * 1.15
+    drawLine(ctx, ox + offX * 0.3, ropeTopY, bottomX, ropeBottomY, pal.balloonDark)
+  }
+
+  // Корзина с плетёной текстурой вместо плоской заливки.
+  px(ctx, ox - bw / 2, basketTop, bw, bh, pal.basket)
+  for (let row = 0; row < bh; row += block) {
+    const shiftIn = row % (block * 2) === 0
+    for (let col = shiftIn ? 0 : block; col < bw; col += block * 2) {
+      px(ctx, ox - bw / 2 + col, basketTop + row, block, block, '#00000022')
+    }
+  }
+  px(ctx, ox - bw / 2, basketTop, bw, block, '#c98a4a') // светлый верхний край
+  px(ctx, ox - bw / 2, basketTop + bh - block, bw, block, '#5a3616') // тёмный нижний край
+  px(ctx, ox - bw / 2 - block, basketTop, block, bh, pal.balloonDark) // левая стойка
+  px(ctx, ox + bw / 2, basketTop, block, bh, pal.balloonDark) // правая стойка
+}
+
+/** Пиксельная линия толщиной ~1 «блок» (для строп/канатов). */
+function drawLine(
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  color: string,
+) {
+  const steps = Math.max(1, Math.round(Math.abs(y1 - y0) / 2))
+  ctx.fillStyle = color
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps
+    const x = x0 + (x1 - x0) * t
+    const y = y0 + (y1 - y0) * t
+    ctx.fillRect(Math.round(x), Math.round(y), 2, 2)
+  }
 }
 
 /** Иконка бустера — сундук/подарок с ×N. */
@@ -86,7 +136,7 @@ export function drawBooster(
   px(ctx, x - s, y - 6 * s, 2 * s, 10 * s, dark)
   // подпись ×N
   ctx.fillStyle = '#2a1a05'
-  ctx.font = '700 9px "Pixelify Sans", monospace'
+  ctx.font = '700 9px ui-sans-serif, system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(`×${tier}`, x, y + s)

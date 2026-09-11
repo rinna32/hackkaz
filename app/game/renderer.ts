@@ -73,7 +73,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, st: SceneState) {
   }
 
   // Уровни (горизонтальные линии + маркеры слева)
-  ctx.font = '700 8px "Pixelify Sans", monospace'
+  ctx.font = '700 8px ui-sans-serif, system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   for (let i = 0; i < st.levels.length; i++) {

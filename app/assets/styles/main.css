@@ -1,84 +1,102 @@
-@font-face {
-  font-family: 'Pixelify Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/PixelifySans-Regular.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Pixelify Sans';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/PixelifySans-Bold.ttf') format('truetype');
+@import 'tailwindcss';
+
+/* Токены темы — доступны и как Tailwind-утилиты (bg-panel, text-ink-dim, ...),
+   и как обычные CSS-переменные (для мест, где нужен var(...) — напр. канвас). */
+@theme {
+  /* Системный шрифт ОС — чёткий и читаемый на любой платформе, без пиксельных засечек. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --color-bg: #10121b;
+  --color-panel: #1c2233;
+  --color-panel-2: #2a3350;
+  --color-ink: #f4f4f6;
+  --color-ink-dim: #9aa3c0;
+  --color-line: #3a456b;
+  --color-yellow: #ffd23f;
+  --color-yellow-hot: #ffe98a;
+  --color-green: #4fd66f;
+  --color-green-deep: #2a8f45;
+  --color-red: #ff5a4d;
+  --color-red-deep: #b32d2d;
+  --color-shadow: #05060b;
+  --color-gold: #ffcf4d;
+
+  --animate-pulse-fast: pulse-fast 0.6s ease;
+  --animate-bpop: bpop 0.4s ease;
+  --animate-bob: bob 0.8s ease-in-out infinite alternate;
+  --animate-fade-out: fade-out 0.5s forwards;
 }
 
+@keyframes pulse-fast {
+  50% {
+    filter: brightness(1.5);
+  }
+}
+@keyframes bpop {
+  0% {
+    transform: scale(0.5);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes bob {
+  to {
+    transform: translateY(4px);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Акцентный цвет темы игры (красный/зелёный шар) — переключается классом на
+   корневом элементе, поэтому остаётся рантайм-переменной, а не токеном Tailwind. */
 :root {
-  /* Общая палитра (ограниченная, ретро-аркада) */
-  --c-bg: #10121b;
-  --c-panel: #1c2233;
-  --c-panel-2: #2a3350;
-  --c-ink: #f4f4f6;
-  --c-ink-dim: #9aa3c0;
-  --c-line: #3a456b;
-  --c-yellow: #ffd23f;
-  --c-yellow-hot: #ffe98a;
-  --c-green: #4fd66f;
-  --c-green-deep: #2a8f45;
-  --c-red: #ff5a4d;
-  --c-red-deep: #b32d2d;
-  --c-shadow: #05060b;
-  --c-gold: #ffcf4d;
-
-  --theme: var(--c-red);
-  --theme-deep: var(--c-red-deep);
-
+  --theme: var(--color-red);
+  --theme-deep: var(--color-red-deep);
   color-scheme: dark;
 }
-
 .theme-red {
-  --theme: var(--c-red);
-  --theme-deep: var(--c-red-deep);
+  --theme: var(--color-red);
+  --theme-deep: var(--color-red-deep);
 }
 .theme-green {
-  --theme: var(--c-green);
-  --theme-deep: var(--c-green-deep);
+  --theme: var(--color-green);
+  --theme-deep: var(--color-green-deep);
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  #__nuxt {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans overflow-hidden select-none;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    font-family: inherit;
+  }
+  /* Канвас остаётся пиксельным намеренно — это графика игры, не текст интерфейса. */
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
 }
 
-html,
-body,
-#__nuxt {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-body {
-  background: var(--c-bg);
-  color: var(--c-ink);
-  font-family: 'Pixelify Sans', 'Courier New', monospace;
-  -webkit-font-smoothing: none;
-  font-smooth: never;
-  image-rendering: pixelated;
-  overflow: hidden;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
-
-button {
-  font-family: inherit;
-}
-
-/* Убрать анимации, если пользователь просит */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;

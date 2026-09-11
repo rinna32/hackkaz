@@ -38,8 +38,7 @@ test.describe('Воздушный Шар — игровой цикл', () => {
     await expect.poll(() => multValue(page), { timeout: 15000 }).toBeGreaterThanOrEqual(2.4)
     await page.getByTestId('cashout-btn').click()
 
-    // «Могли бы забрать больше» + баланс вырос (после зачисления выигрыша)
-    await expect(page.getByTestId('could-more')).toBeVisible()
+    // Баланс вырос сразу (после зачисления выигрыша)
     await expect
       .poll(async () => {
         const t = await page.getByTestId('balance').innerText()
@@ -47,8 +46,8 @@ test.describe('Воздушный Шар — игровой цикл', () => {
       })
       .toBeGreaterThan(900)
 
-    // Шар летит до краха → экран результата
-    await expect(page.getByTestId('result-card')).toBeVisible({ timeout: 15000 })
+    // Раунд заканчивается сразу по нажатию «Забрать», не дожидаясь краха → экран результата
+    await expect(page.getByTestId('result-card')).toBeVisible({ timeout: 3000 })
     await expect(page.getByTestId('result-card')).toHaveAttribute('data-outcome', 'win')
     await expect(page.getByTestId('crash-mult')).toContainText('3.02')
     await expect(page.getByTestId('win-amount')).toBeVisible()
@@ -96,7 +95,7 @@ test.describe('Воздушный Шар — игровой цикл', () => {
     // Забираем сразу после активации бустера (до краха ×2.39)
     await page.getByTestId('cashout-btn').click()
 
-    await expect(page.getByTestId('result-card')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId('result-card')).toBeVisible({ timeout: 3000 })
     await expect(page.getByTestId('result-card')).toHaveAttribute('data-outcome', 'win')
     // Бустер применён → доп. очки (>= бонус за бустер)
     await expect(page.getByTestId('reward')).toBeVisible()

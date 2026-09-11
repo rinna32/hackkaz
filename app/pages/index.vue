@@ -12,17 +12,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="game-root" :class="`theme-${store.theme}`">
+  <div class="relative h-full w-full overflow-hidden" :class="`theme-${store.theme}`">
     <template v-if="store.ready">
       <BetScreen v-if="store.screen === 'bet'" />
       <GameScreen v-else-if="store.screen === 'game'" />
       <ResultScreen v-else-if="store.screen === 'result'" />
     </template>
-    <div v-else class="loading">Загрузка…</div>
+    <div v-else class="flex h-full items-center justify-center text-ink-dim">Загрузка…</div>
 
     <!-- Тост -->
     <transition name="toast">
-      <div v-if="store.toast" :key="store.toast.id" class="toast" data-testid="toast">
+      <div
+        v-if="store.toast"
+        :key="store.toast.id"
+        class="pointer-events-none fixed bottom-6 left-1/2 z-[100] -translate-x-1/2 border-[3px] border-shadow bg-yellow px-4 py-2.5 text-sm font-bold text-[#10121b] shadow-[0_4px_0_var(--color-shadow)]"
+        data-testid="toast"
+      >
         {{ store.toast.text }}
       </div>
     </transition>
@@ -30,41 +35,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.game-root {
-  position: relative;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-.loading {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--c-ink-dim);
-}
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  background: var(--c-yellow);
-  color: #10121b;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 10px 16px;
-  border: 3px solid var(--c-shadow);
-  box-shadow: 0 4px 0 var(--c-shadow);
-  z-index: 100;
-  pointer-events: none;
-}
+@reference '~/assets/styles/main.css';
+
 .toast-enter-active,
 .toast-leave-active {
-  transition: all 0.2s;
+  @apply transition-all duration-200;
 }
 .toast-enter-from,
 .toast-leave-to {
-  opacity: 0;
+  @apply opacity-0;
   transform: translate(-50%, 12px);
 }
 </style>

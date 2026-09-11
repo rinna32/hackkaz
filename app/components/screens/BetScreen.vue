@@ -33,37 +33,48 @@ async function start() {
 </script>
 
 <template>
-  <div class="screen" :class="`theme-${store.theme}`">
+  <div class="flex h-full flex-col" :class="`theme-${store.theme}`">
     <BalanceBar show-top-up show-rules @rules="rulesOpen = true" />
 
-    <div class="content">
-      <div class="main">
-        <div class="theme-switch" data-testid="theme-switch">
+    <div class="flex flex-1 flex-col items-center gap-4 overflow-y-auto px-4 py-5">
+      <div class="mx-auto flex w-full max-w-[640px] min-w-0 flex-col items-center gap-4">
+        <div class="flex w-full justify-center gap-4" data-testid="theme-switch">
           <button
-            class="tbtn red"
-            :class="{ active: store.theme === 'red' }"
+            class="flex max-w-[260px] flex-1 cursor-pointer flex-col items-center gap-1.5 border-[3px] border-shadow bg-panel p-4 text-[15px] font-bold text-ink transition-transform duration-75"
+            :class="
+              store.theme === 'red' ? 'outline outline-[3px] outline-yellow -translate-y-[3px] scale-[1.03]' : ''
+            "
             data-testid="theme-red"
             @click="pick('red')"
           >
-            <span class="ball" />Красный
-            <small>12 уровней</small>
+            <span class="block h-10 w-[34px] rounded-[50%_50%_45%_45%] border-2 border-shadow bg-red" />
+            Красный
+            <small class="text-[11px] font-normal text-ink-dim">12 уровней</small>
           </button>
           <button
-            class="tbtn green"
-            :class="{ active: store.theme === 'green' }"
+            class="flex max-w-[260px] flex-1 cursor-pointer flex-col items-center gap-1.5 border-[3px] border-shadow bg-panel p-4 text-[15px] font-bold text-ink transition-transform duration-75"
+            :class="
+              store.theme === 'green'
+                ? 'outline outline-[3px] outline-yellow -translate-y-[3px] scale-[1.03]'
+                : ''
+            "
             data-testid="theme-green"
             @click="pick('green')"
           >
-            <span class="ball" />Зелёный
-            <small>9 уровней</small>
+            <span class="block h-10 w-[34px] rounded-[50%_50%_45%_45%] border-2 border-shadow bg-green" />
+            Зелёный
+            <small class="text-[11px] font-normal text-ink-dim">9 уровней</small>
           </button>
         </div>
 
-        <div class="levels-note" data-testid="level-count">
-          Тема: {{ store.themeConfig?.name }} · уровней: <b>{{ store.levelCount }}</b>
+        <div class="text-center text-[13px] text-ink-dim" data-testid="level-count">
+          Тема: {{ store.themeConfig?.name }} · уровней: <b class="text-yellow">{{ store.levelCount }}</b>
         </div>
 
-        <div class="frags" :class="{ activating }">
+        <div
+          class="grid w-full grid-cols-2 justify-items-center gap-3 md:grid-cols-4"
+          :class="activating ? 'animate-pulse-fast' : ''"
+        >
           <PuzzleFragment
             v-for="(opt, i) in store.betOptions"
             :key="opt.id"
@@ -75,13 +86,15 @@ async function start() {
           />
         </div>
 
-        <div class="booster-hint">
+        <div
+          class="w-full border-2 border-shadow bg-panel px-3 py-2.5 text-center text-xs leading-relaxed text-ink-dim"
+        >
           Бустер срабатывает, если шар пройдёт уровень с маркером
-          <b>до того, как ты забрал</b>, и умножит коэффициент.
+          <b class="text-yellow">до того, как ты забрал</b>, и умножит коэффициент.
         </div>
 
         <PixelButton
-          class="start"
+          class="max-w-[420px]"
           size="lg"
           block
           :disabled="!canStart || activating"
@@ -92,7 +105,7 @@ async function start() {
         </PixelButton>
       </div>
 
-      <div class="side">
+      <div class="w-full max-w-[640px] flex-none">
         <HistoryFeed :items="store.history" />
       </div>
     </div>
@@ -100,115 +113,3 @@ async function start() {
     <RulesModal :open="rulesOpen" @close="rulesOpen = false" />
   </div>
 </template>
-
-<style scoped>
-.screen {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-.content {
-  flex: 1;
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  overflow-y: auto;
-  align-items: flex-start;
-}
-.main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 560px;
-  margin: 0 auto;
-}
-.side {
-  width: 260px;
-  flex: 0 0 auto;
-}
-.theme-switch {
-  display: flex;
-  gap: 10px;
-}
-.tbtn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px;
-  border: 3px solid var(--c-shadow);
-  background: var(--c-panel);
-  color: var(--c-ink);
-  cursor: pointer;
-  font-weight: 700;
-}
-.tbtn small {
-  font-size: 8px;
-  color: var(--c-ink-dim);
-  font-weight: 400;
-}
-.tbtn .ball {
-  width: 22px;
-  height: 26px;
-  border-radius: 50% 50% 45% 45%;
-  border: 2px solid var(--c-shadow);
-  display: block;
-}
-.tbtn.red .ball {
-  background: var(--c-red);
-}
-.tbtn.green .ball {
-  background: var(--c-green);
-}
-.tbtn.active {
-  outline: 3px solid var(--c-yellow);
-  transform: translateY(-2px);
-}
-.levels-note {
-  font-size: 11px;
-  color: var(--c-ink-dim);
-  text-align: center;
-}
-.levels-note b {
-  color: var(--c-yellow);
-}
-.frags {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.frags.activating {
-  animation: pulse 0.6s;
-}
-@keyframes pulse {
-  50% {
-    filter: brightness(1.5);
-  }
-}
-.booster-hint {
-  font-size: 10px;
-  color: var(--c-ink-dim);
-  background: var(--c-panel);
-  border: 2px solid var(--c-shadow);
-  padding: 6px 8px;
-  line-height: 1.4;
-}
-.booster-hint b {
-  color: var(--c-yellow);
-}
-@media (max-width: 720px) {
-  .content {
-    flex-direction: column;
-  }
-  .side {
-    width: 100%;
-    order: -1;
-  }
-  .frags {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-</style>

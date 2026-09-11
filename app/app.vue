@@ -1,12 +1,6 @@
 <template>
-  <div class="app-root">
+  <div class="h-full">
     <NuxtRouteAnnouncer />
     <NuxtPage />
   </div>
 </template>
-
-<style>
-.app-root {
-  height: 100%;
-}
-</style>

@@ -133,22 +133,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="canvas-wrap">
-    <canvas ref="display" class="game-canvas" />
+  <div class="flex h-full w-full items-center justify-center overflow-hidden">
+    <canvas ref="display" class="block [image-rendering:pixelated]" />
   </div>
 </template>
-
-<style scoped>
-.canvas-wrap {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.game-canvas {
-  image-rendering: pixelated;
-  display: block;
-}
-</style>

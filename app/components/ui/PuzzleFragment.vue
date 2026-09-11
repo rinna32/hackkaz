@@ -14,86 +14,30 @@ const label = computed(() => (props.option.boosterTier === 1 ? 'Без буст�
 
 <template>
   <button
-    class="frag"
-    :class="{ selected, disabled: !affordable }"
+    class="relative flex w-full max-w-[150px] cursor-pointer flex-col items-center gap-2 border-[3px] border-shadow bg-panel-2 px-2.5 pb-2.5 pt-3.5 text-ink transition-transform duration-75"
+    :class="[
+      selected && 'selected translate-y-[-3px] scale-[1.04] bg-panel outline outline-[3px] outline-yellow',
+      !affordable && 'disabled cursor-not-allowed opacity-50 grayscale-[0.6]',
+    ]"
     :data-testid="`bet-${option.id}`"
     :data-tier="option.boosterTier"
     type="button"
     @click="emit('select')"
   >
-    <div class="piece" :data-idx="index">
-      <span class="tier">×{{ option.boosterTier }}</span>
+    <div
+      class="flex h-[68px] w-[68px] items-center justify-center border-2 border-shadow bg-[var(--theme,var(--color-red))] shadow-[inset_-4px_-4px_0_rgba(0,0,0,0.22),inset_3px_3px_0_rgba(255,255,255,0.18)] [clip-path:polygon(15%_15%,35%_15%,35%_0%,65%_0%,65%_15%,85%_15%,85%_85%,65%_85%,65%_65%,35%_65%,35%_85%,15%_85%)]"
+      :data-idx="index"
+    >
+      <span class="text-[22px] font-bold text-[#10121b] [text-shadow:0_1px_0_rgba(255,255,255,0.25)]">
+        ×{{ option.boosterTier }}
+      </span>
     </div>
-    <div class="info">
-      <span class="cost">{{ option.cost }} <small>бонусов</small></span>
-      <span class="boost">{{ label }}</span>
+    <div class="flex flex-col items-center leading-[1.3]">
+      <span class="text-base font-bold text-yellow"
+        >{{ option.cost }} <small class="text-[10px] text-ink-dim">бонусов</small></span
+      >
+      <span class="text-[11px] text-ink-dim">{{ label }}</span>
     </div>
-    <span v-if="!affordable" class="lock">🔒</span>
+    <span v-if="!affordable" class="absolute right-2 top-1.5 text-sm">🔒</span>
   </button>
 </template>
-
-<style scoped>
-.frag {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 8px;
-  background: var(--c-panel-2);
-  border: 3px solid var(--c-shadow);
-  cursor: pointer;
-  color: var(--c-ink);
-  transition: transform 0.08s;
-}
-.frag.selected {
-  outline: 3px solid var(--c-yellow);
-  transform: translateY(-3px) scale(1.03);
-  background: var(--c-panel);
-}
-.frag.disabled {
-  opacity: 0.5;
-  filter: grayscale(0.6);
-  cursor: not-allowed;
-}
-.piece {
-  width: 46px;
-  height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--theme, var(--c-red));
-  border: 2px solid var(--c-shadow);
-  clip-path: polygon(0 0, 70% 0, 70% 15%, 100% 15%, 100% 100%, 30% 100%, 30% 85%, 0 85%);
-}
-.tier {
-  font-size: 18px;
-  font-weight: 700;
-  color: #10121b;
-}
-.info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1.2;
-}
-.cost {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--c-yellow);
-}
-.cost small {
-  font-size: 8px;
-  color: var(--c-ink-dim);
-}
-.boost {
-  font-size: 9px;
-  color: var(--c-ink-dim);
-}
-.lock {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 12px;
-}
-</style>

@@ -11,14 +11,18 @@ const padded = computed(() => String(store.balance).padStart(5, '0'))
 </script>
 
 <template>
-  <div class="bar">
-    <div class="brand">
-      <span class="dot" />ВОЗДУШНЫЙ ШАР
+  <div
+    class="flex flex-wrap items-center justify-between gap-2 border-b-[3px] border-shadow bg-panel px-2.5 py-2"
+  >
+    <div class="flex items-center gap-1.5 text-[15px] font-bold text-yellow">
+      <span
+        class="inline-block h-2.5 w-2.5 bg-[var(--theme,var(--color-red))] shadow-[0_0_0_2px_var(--color-shadow)]"
+      />ВОЗДУШНЫЙ ШАР
     </div>
-    <div class="right">
-      <div class="balance" data-testid="balance">
-        <span class="lbl">БОНУСЫ</span>
-        <span class="val">{{ padded }}</span>
+    <div class="flex items-center gap-2">
+      <div class="flex flex-col items-end leading-none" data-testid="balance">
+        <span class="text-[11px] tracking-wide text-ink-dim">БОНУСЫ</span>
+        <span class="text-xl font-bold text-yellow">{{ padded }}</span>
       </div>
       <PixelButton v-if="showTopUp" size="sm" variant="ghost" data-testid="topup" @click="store.topUp()">
         + Пополнить
@@ -29,51 +33,3 @@ const padded = computed(() => String(store.balance).padStart(5, '0'))
     </div>
   </div>
 </template>
-
-<style scoped>
-.bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--c-panel);
-  border-bottom: 3px solid var(--c-shadow);
-  flex-wrap: wrap;
-}
-.brand {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--c-yellow);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.dot {
-  width: 10px;
-  height: 10px;
-  background: var(--theme, var(--c-red));
-  display: inline-block;
-  box-shadow: 0 0 0 2px var(--c-shadow);
-}
-.right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.balance {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  line-height: 1;
-}
-.lbl {
-  font-size: 8px;
-  color: var(--c-ink-dim);
-}
-.val {
-  font-size: 18px;
-  color: var(--c-yellow);
-  font-weight: 700;
-}
-</style>
