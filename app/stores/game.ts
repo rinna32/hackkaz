@@ -11,7 +11,7 @@ import type {
 import { InsufficientBalanceError } from '~/services/GameApi'
 import { displayedMultiplier, levelsCrossed, multiplierAt } from '~/services/mock/engine'
 
-export type Screen = 'bet' | 'game' | 'result'
+export type Screen = 'bet' | 'game' | 'result' | 'account' | 'admin'
 export type Phase = 'idle' | 'flying' | 'cashed' | 'crashed'
 
 interface Floater {
@@ -295,6 +295,26 @@ export const useGameStore = defineStore('game', () => {
     floaters.value = []
   }
 
+  // --- личный кабинет ---
+  const accountReturnScreen = ref<Screen>('bet')
+  function openAccount() {
+    if (screen.value !== 'account') accountReturnScreen.value = screen.value
+    screen.value = 'account'
+  }
+  function closeAccount() {
+    screen.value = accountReturnScreen.value
+  }
+
+  // --- админ-панель ---
+  const adminReturnScreen = ref<Screen>('bet')
+  function openAdmin() {
+    if (screen.value !== 'admin') adminReturnScreen.value = screen.value
+    screen.value = 'admin'
+  }
+  function closeAdmin() {
+    screen.value = adminReturnScreen.value
+  }
+
   return {
     // state
     config,
@@ -337,5 +357,9 @@ export const useGameStore = defineStore('game', () => {
     playAgain,
     repeatSame,
     resetRound,
+    openAccount,
+    closeAccount,
+    openAdmin,
+    closeAdmin,
   }
 })

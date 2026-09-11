@@ -18,6 +18,9 @@ export default defineNuxtConfig({
     public: {
       // Фиксированный seed для воспроизводимых демо/проверок. Пусто = случайный seed.
       devFixedSeed: process.env.NUXT_PUBLIC_DEV_FIXED_SEED || '',
+      // Бэкенд User API (свагер: аккаунты/лидерборд/награды/турнир) — отдельный сервис,
+      // движок раунда шара по-прежнему на MockGameApi.
+      userApiBase: process.env.NUXT_PUBLIC_USER_API_BASE || 'http://localhost:8000',
     },
   },
 

@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { useGameStore } from '~/stores/game'
+import { useAuthStore } from '~/stores/auth'
 import PixelButton from '~/components/ui/PixelButton.vue'
+import AuthModal from '~/components/ui/AuthModal.vue'
 
 const store = useGameStore()
+const auth = useAuthStore()
+const authOpen = ref(false)
 
 defineProps<{ showTopUp?: boolean; showRules?: boolean }>()
 const emit = defineEmits<{ rules: [] }>()
 
 const padded = computed(() => String(store.balance).padStart(5, '0'))
+
+function onAuthClick() {
+  if (auth.loggedIn) store.openAccount()
+  else authOpen.value = true
+}
 </script>
 
 <template>
@@ -30,6 +39,20 @@ const padded = computed(() => String(store.balance).padStart(5, '0'))
       <PixelButton v-if="showRules" size="sm" variant="ghost" data-testid="rules-btn" @click="emit('rules')">
         ?
       </PixelButton>
+      <PixelButton size="sm" variant="ghost" data-testid="auth-btn" @click="onAuthClick">
+        {{ auth.loggedIn ? `👤 ${auth.username}` : 'Войти' }}
+      </PixelButton>
+      <PixelButton
+        v-if="auth.isAdmin"
+        size="sm"
+        variant="danger"
+        data-testid="admin-btn"
+        @click="store.openAdmin()"
+      >
+        ⚙ Админка
+      </PixelButton>
     </div>
+
+    <AuthModal :open="authOpen" @close="authOpen = false" />
   </div>
 </template>
