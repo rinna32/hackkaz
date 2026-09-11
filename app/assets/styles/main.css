@@ -1,0 +1,87 @@
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PixelifySans-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/PixelifySans-Bold.ttf') format('truetype');
+}
+
+:root {
+  /* Общая палитра (ограниченная, ретро-аркада) */
+  --c-bg: #10121b;
+  --c-panel: #1c2233;
+  --c-panel-2: #2a3350;
+  --c-ink: #f4f4f6;
+  --c-ink-dim: #9aa3c0;
+  --c-line: #3a456b;
+  --c-yellow: #ffd23f;
+  --c-yellow-hot: #ffe98a;
+  --c-green: #4fd66f;
+  --c-green-deep: #2a8f45;
+  --c-red: #ff5a4d;
+  --c-red-deep: #b32d2d;
+  --c-shadow: #05060b;
+  --c-gold: #ffcf4d;
+
+  --theme: var(--c-red);
+  --theme-deep: var(--c-red-deep);
+
+  color-scheme: dark;
+}
+
+.theme-red {
+  --theme: var(--c-red);
+  --theme-deep: var(--c-red-deep);
+}
+.theme-green {
+  --theme: var(--c-green);
+  --theme-deep: var(--c-green-deep);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__nuxt {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: 'Pixelify Sans', 'Courier New', monospace;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  image-rendering: pixelated;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Убрать анимации, если пользователь просит */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
