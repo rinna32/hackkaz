@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_CONFIG } from '~/config/game.config'
-import { createPrng } from '~/services/mock/prng'
+import { DEFAULT_CONFIG } from '~/shared/config/game.config'
+import { createPrng } from '~/shared/lib/game/prng'
 import {
   boosterTriggered,
   computeRoundPoints,
@@ -12,7 +12,7 @@ import {
   pickBoosterLevel,
   round2,
   timeForMultiplier,
-} from '~/services/mock/engine'
+} from '~/shared/lib/game/engine'
 
 const cfg = DEFAULT_CONFIG
 

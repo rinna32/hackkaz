@@ -7,12 +7,12 @@ import type {
   Round,
   RoundResult,
   ThemeId,
-} from '~/types/game'
-import { InsufficientBalanceError } from '~/services/GameApi'
-import { displayedMultiplier, levelsCrossed, multiplierAt } from '~/services/mock/engine'
+} from '~/shared/types/game'
+import { InsufficientBalanceError } from '~/shared/api/GameApi'
+import { displayedMultiplier, levelsCrossed, multiplierAt } from '~/shared/lib/game/engine'
 
 export type Screen = 'bet' | 'game' | 'result'
-export type Phase = 'idle' | 'flying' | 'cashed' | 'crashed'
+export type Phase = 'idle' | 'flying' | 'crashed'
 
 interface Floater {
   id: number
@@ -224,7 +224,10 @@ export const useGameStore = defineStore('game', () => {
     }, 1200)
   }
 
-  /** Раунд заканчивается сразу по нажатию «Забрать» — не дожидаясь краха шара. */
+  /**
+   * «Забрать»: фиксируем выигрыш, но шар ПРОДОЛЖАЕТ лететь до точки взрыва.
+   * Раунд финализируется и уходит на экран результата уже в onCrash().
+   */
   async function cashout() {
     if (!round.value || !canCashout.value || cashoutPending) return
     cashoutPending = true
@@ -233,17 +236,9 @@ export const useGameStore = defineStore('game', () => {
       const res = await api.cashout(id, elapsedMs.value)
       if (!res.accepted) return
       cashoutInfo.value = res
-      phase.value = 'cashed'
+      // phase остаётся 'flying' — tick() продолжает крутить кривую до краха
       balance.value = await api.getBalance()
       pushFloater(`+${res.winnings} бонусов`)
-
-      const fin = await api.finalizeRound(id)
-      result.value = fin
-      await refreshBalance()
-      await refreshHistory()
-      setTimeout(() => {
-        if (phase.value === 'cashed') screen.value = 'result'
-      }, 600)
     } finally {
       cashoutPending = false
     }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import LeaderboardScreen from '~/components/screens/LeaderboardScreen.vue'
+import LeaderboardBoard from '~/features/LeaderboardBoard.vue'
 </script>
 
 <template>
-  <LeaderboardScreen />
+  <LeaderboardBoard />
 </template>

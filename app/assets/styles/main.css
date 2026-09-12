@@ -1,25 +1,52 @@
 @import 'tailwindcss';
 
-/* Токены темы — доступны и как Tailwind-утилиты (bg-panel, text-ink-dim, ...),
-   и как обычные CSS-переменные (для мест, где нужен var(...) — напр. канвас). */
-@theme {
-  /* Системный шрифт ОС — чёткий и читаемый на любой платформе, без пиксельных засечек. */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+/* Класс-стратегия тёмной темы (@nuxtjs/color-mode вешает .dark на <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  --color-bg: #10121b;
-  --color-panel: #1c2233;
-  --color-panel-2: #2a3350;
-  --color-ink: #f4f4f6;
-  --color-ink-dim: #9aa3c0;
-  --color-line: #3a456b;
-  --color-yellow: #ffd23f;
-  --color-yellow-hot: #ffe98a;
-  --color-green: #4fd66f;
-  --color-green-deep: #2a8f45;
-  --color-red: #ff5a4d;
-  --color-red-deep: #b32d2d;
-  --color-shadow: #05060b;
-  --color-gold: #ffcf4d;
+/* Глобальные стили приложения — в чёрно-белой минималистичной стилистике
+   (как chulakov.ru): белый фон, почти-чёрный текст, тонкие границы, крупная
+   типографика Inter, скруглённые карточки. Токены живут в :root, а классы
+   .btn/.card — переиспользуемые элементы. */
+
+/* Светлая тема «Столото» (по умолчанию). */
+:root,
+.light {
+  --c-bg: #f1f2f4; /* светло-серый фон страницы (как на stoloto.ru) */
+  --c-card: #ffffff; /* фон карточек/шапки */
+  --c-ink: #16171b; /* основной текст */
+  --c-muted: #7b8090; /* вторичный текст */
+  --c-line: #e7e8ec; /* тонкие границы */
+  --c-surface: #f5f6f8; /* подложка-плитка внутри карточек */
+  --c-accent: #ffcd17; /* фирменное золото «Столото» */
+  --c-accent-deep: #e0a800; /* тёмное золото для hover/текста */
+  --radius: 20px; /* скругление карточек */
+}
+
+/* Тёмная тема (переключатель в шапке). */
+.dark {
+  --c-bg: #0f1116;
+  --c-card: #171a21;
+  --c-ink: #f2f3f5;
+  --c-muted: #9aa0ad;
+  --c-line: #2a2f39;
+  --c-surface: #1e222b;
+  --c-accent: #ffcd17;
+  --c-accent-deep: #ffd84d;
+}
+
+/* Привязываем CSS-переменные к утилитам Tailwind: bg-bg / text-ink / text-muted /
+   border-line / bg-surface / rounded-card. */
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-bg: var(--c-bg);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-surface: var(--c-surface);
+  --color-card: var(--c-card);
+  --color-accent: var(--c-accent);
+  --color-accent-deep: var(--c-accent-deep);
+  --radius-card: var(--radius);
 
   --animate-pulse-fast: pulse-fast 0.6s ease;
   --animate-bpop: bpop 0.4s ease;
@@ -54,57 +81,6 @@
   }
 }
 
-/* Акцентный цвет темы игры (красный/зелёный шар) — переключается классом на
-   корневом элементе, поэтому остаётся рантайм-переменной, а не токеном Tailwind. */
-:root {
-  --theme: var(--color-red);
-  --theme-deep: var(--color-red-deep);
-}
-.theme-red {
-  --theme: var(--color-red);
-  --theme-deep: var(--color-red-deep);
-}
-.theme-green {
-  --theme: var(--color-green);
-  --theme-deep: var(--color-green-deep);
-}
-
-/* Светлая/тёмная тема интерфейса (@nuxtjs/color-mode добавляет .dark/.light на
-   <html>). Все компоненты уже читают цвета только через переменные ниже —
-   переключение темы не требует правок ни одного компонента. */
-.dark {
-  --color-bg: #10121b;
-  --color-panel: #1c2233;
-  --color-panel-2: #2a3350;
-  --color-ink: #f4f4f6;
-  --color-ink-dim: #9aa3c0;
-  --color-line: #3a456b;
-  --color-yellow: #ffd23f;
-  --color-yellow-hot: #ffe98a;
-  --color-green: #4fd66f;
-  --color-green-deep: #2a8f45;
-  --color-red: #ff5a4d;
-  --color-red-deep: #b32d2d;
-  --color-gold: #ffcf4d;
-  color-scheme: dark;
-}
-.light {
-  --color-bg: #eef0f6;
-  --color-panel: #ffffff;
-  --color-panel-2: #e1e4ef;
-  --color-ink: #14161f;
-  --color-ink-dim: #5b6178;
-  --color-line: #c7cbd8;
-  --color-yellow: #b8860a;
-  --color-yellow-hot: #d4980a;
-  --color-green: #1f9d4f;
-  --color-green-deep: #146534;
-  --color-red: #d13a2e;
-  --color-red-deep: #8f1f1f;
-  --color-gold: #b8860a;
-  color-scheme: light;
-}
-
 @layer base {
   * {
     box-sizing: border-box;
@@ -117,18 +93,80 @@
     height: 100%;
   }
   body {
-    @apply bg-bg text-ink font-sans overflow-hidden select-none;
+    background: var(--c-bg);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
     font-size: 15px;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
-  button {
-    font-family: inherit;
+  /* Страница без прокрутки (игра с канвасом) — класс вешается через useHead */
+  body.no-scroll {
+    overflow: hidden;
   }
-  /* Канвас остаётся пиксельным намеренно — это графика игры, не текст интерфейса. */
+  /* Канвас остаётся пиксельным — это графика игры, не текст интерфейса. */
   canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+  }
+}
+
+/* ── Переиспользуемые элементы ── */
+@layer components {
+  /* Кнопка-«таблетка»: основная — чёрная заливка, вторичная — обводка. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  }
+  /* Основная кнопка — жёлтый акцент с тёмным текстом. */
+  .btn--primary {
+    background: var(--c-accent);
+    color: var(--c-ink);
+  }
+  .btn--primary:hover {
+    background: var(--c-accent-deep);
+  }
+  .btn--ghost {
+    background: transparent;
+    color: var(--c-ink);
+    border-color: var(--c-line);
+  }
+  .btn--ghost:hover {
+    border-color: var(--c-accent);
+  }
+  .btn--danger {
+    background: #c0362c;
+    color: #fff;
+  }
+  .btn--danger:hover {
+    background: #a32b22;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  .btn__arrow {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Карточка: крупное скругление и мягкая тень (стиль «Столото»). */
+  .card {
+    background: var(--c-card);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(16, 17, 26, 0.04), 0 8px 24px -12px rgba(16, 17, 26, 0.12);
   }
 }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
-import AccountScreen from '~/components/screens/AccountScreen.vue'
+import AccountBoard from '~/features/AccountBoard.vue'
 
 const auth = useAuthStore()
 
@@ -15,5 +15,5 @@ watch(
 </script>
 
 <template>
-  <AccountScreen v-if="auth.loggedIn" />
+  <AccountBoard v-if="auth.loggedIn" />
 </template>

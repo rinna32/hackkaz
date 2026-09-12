@@ -1,5 +1,5 @@
-import { MockGameApi } from '~/services/mock/MockGameApi'
-import type { GameApi } from '~/services/GameApi'
+import { MockGameApi } from '~/shared/api/mock/MockGameApi'
+import type { GameApi } from '~/shared/api/GameApi'
 
 /**
  * Внедряет реализацию GameApi в приложение. Сейчас — MockGameApi («сервер в

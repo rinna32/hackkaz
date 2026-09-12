@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_CONFIG } from '~/config/game.config'
-import { MockGameApi } from '~/services/mock/MockGameApi'
-import { timeForMultiplier } from '~/services/mock/engine'
+import { DEFAULT_CONFIG } from '~/shared/config/game.config'
+import { MockGameApi } from '~/shared/api/mock/MockGameApi'
+import { timeForMultiplier } from '~/shared/lib/game/engine'
 
 function memoryKV() {
   const m = new Map<string, string>()

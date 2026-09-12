@@ -219,16 +219,19 @@ export const useAuthStore = defineStore('auth', () => {
     await loadAdminData()
   }
 
-  // --- турнир (публично, без токена) ---
-  const tournament = ref<AdminTournament | null>(null)
+  // --- турниры (публично, без токена) ---
+  // Эндпоинт /api/tournament отдаёт СПИСОК всех активных турниров (массив), а не один.
+  const tournaments = ref<AdminTournament[]>([])
   const tournamentLoading = ref(false)
 
   async function loadTournament() {
     tournamentLoading.value = true
     try {
-      tournament.value = await request('/api/tournament')
+      const data = await request('/api/tournament')
+      // Бэкенд может вернуть массив либо (исторически) один объект — нормализуем в список.
+      tournaments.value = Array.isArray(data) ? data : data ? [data] : []
     } catch {
-      tournament.value = null
+      tournaments.value = []
     } finally {
       tournamentLoading.value = false
     }
@@ -270,6 +273,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     username,
     email,
+    token,
     loading,
     error,
     loggedIn,
@@ -291,7 +295,7 @@ export const useAuthStore = defineStore('auth', () => {
     adminCreateReward,
     adminCreateTournament,
     adminDeleteTournament,
-    tournament,
+    tournaments,
     tournamentLoading,
     loadTournament,
     leaderboardLive,

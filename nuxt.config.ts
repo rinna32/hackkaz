@@ -10,10 +10,10 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt', '@nuxtjs/color-mode'],
 
-  // Тёмная тема — оформление игры по умолчанию; светлая доступна переключателем.
+  // Тёмная/светлая тема: класс .dark / .light вешается на <html>.
   colorMode: {
-    preference: 'dark',
-    fallback: 'dark',
+    preference: 'light',
+    fallback: 'light',
     classSuffix: '',
   },
 
@@ -39,6 +39,15 @@ export default defineNuxtConfig({
         {
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+        },
+      ],
+      // Inter — чистый гротеск для минималистичной ч/б типографики.
+      link: [
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
         },
       ],
     },

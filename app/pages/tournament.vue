@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import TournamentScreen from '~/components/screens/TournamentScreen.vue'
+import TournamentBoard from '~/features/TournamentBoard.vue'
 </script>
 
 <template>
-  <TournamentScreen />
+  <TournamentBoard />
 </template>

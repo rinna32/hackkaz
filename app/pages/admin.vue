@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
-import AdminScreen from '~/components/screens/AdminScreen.vue'
+import AdminBoard from '~/features/AdminBoard.vue'
 
 const auth = useAuthStore()
 
@@ -15,5 +15,5 @@ watch(
 </script>
 
 <template>
-  <AdminScreen v-if="auth.isAdmin" />
+  <AdminBoard v-if="auth.isAdmin" />
 </template>
