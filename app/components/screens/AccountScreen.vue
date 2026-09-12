@@ -9,18 +9,24 @@ const auth = useAuthStore()
 
 const myHistory = computed(() => store.history.filter((h) => h.isSelf))
 
-function formatDate(ts: number) {
-  return new Date(ts).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+// Пробуем реальную историю с бэкенда (по игроку); пока там пусто/недоступно —
+// показываем локальную историю раундов этого шара как есть.
+const useBackendHistory = computed(() => (auth.userGameHistory?.length ?? 0) > 0)
+
+onMounted(() => {
+  if (auth.username) auth.loadUserGameHistory(auth.username)
+})
+
+function formatDate(ts: number | string) {
+  const d = typeof ts === 'number' ? new Date(ts) : new Date(ts)
+  return Number.isNaN(d.getTime())
+    ? String(ts)
+    : d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function logout() {
   auth.logout()
-  store.closeAccount()
+  navigateTo('/')
 }
 </script>
 
@@ -33,7 +39,7 @@ function logout() {
         <button
           class="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent text-sm text-ink-dim"
           data-testid="account-back"
-          @click="store.closeAccount()"
+          @click="navigateTo('/')"
         >
           ← Назад
         </button>
@@ -59,10 +65,22 @@ function logout() {
         <div class="border-[3px] border-shadow bg-panel p-4" data-testid="account-history">
           <div class="mb-3 text-sm font-bold text-ink-dim">ИСТОРИЯ ИГР</div>
 
-          <div v-if="myHistory.length === 0" class="py-6 text-center text-sm text-ink-dim">
-            Вы ещё не сыграли ни одного раунда
+          <!-- Реальные записи с бэкена по этому игроку, когда они есть -->
+          <div v-if="useBackendHistory" class="flex flex-col gap-2">
+            <div
+              v-for="it in auth.userGameHistory"
+              :key="it.id"
+              class="flex items-center justify-between gap-3 border-2 border-shadow bg-panel-2 px-3 py-2"
+            >
+              <span class="text-sm text-yellow">{{ it.score }} очков</span>
+              <span class="text-[11px] text-ink-dim">{{ formatDate(it.played_at) }}</span>
+            </div>
           </div>
 
+          <!-- Иначе — локальная история раундов шара -->
+          <div v-else-if="myHistory.length === 0" class="py-6 text-center text-sm text-ink-dim">
+            Вы ещё не сыграли ни одного раунда
+          </div>
           <div v-else class="flex flex-col gap-2">
             <div
               v-for="it in myHistory"

@@ -30,6 +30,16 @@ export interface AdminTournament {
   name: string
   ends_at: string
 }
+export interface LeaderboardEntry {
+  user_name: string
+  score: number
+}
+export interface GameHistoryEntry {
+  id: string
+  user_name: string
+  score: number
+  played_at: string
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const username = ref<string | null>(null)
@@ -209,6 +219,54 @@ export const useAuthStore = defineStore('auth', () => {
     await loadAdminData()
   }
 
+  // --- турнир (публично, без токена) ---
+  const tournament = ref<AdminTournament | null>(null)
+  const tournamentLoading = ref(false)
+
+  async function loadTournament() {
+    tournamentLoading.value = true
+    try {
+      tournament.value = await request('/api/tournament')
+    } catch {
+      tournament.value = null
+    } finally {
+      tournamentLoading.value = false
+    }
+  }
+
+  // --- таблица лидеров: реальные игроки из БД (публично, без токена) ---
+  const leaderboardLive = ref<LeaderboardEntry[]>([])
+  const leaderboardTop = ref<LeaderboardEntry[]>([])
+  const leaderboardLoading = ref(false)
+
+  /** Оба запроса независимы: если один недоступен, второй всё равно отобразится. */
+  async function loadLeaderboard() {
+    leaderboardLoading.value = true
+    const [live, top] = await Promise.allSettled([
+      request('/api/tournament/live'),
+      request('/api/tournament/top'),
+    ])
+    leaderboardLive.value = live.status === 'fulfilled' ? live.value ?? [] : []
+    leaderboardTop.value = top.status === 'fulfilled' ? top.value ?? [] : []
+    leaderboardLoading.value = false
+  }
+
+  // --- история игр пользователя (публично, без токена) ---
+  // Бэкенд отдаёт общий список по всем игрокам — фильтруем на клиенте по имени.
+  // null = запрос не удался (эндпоинт недоступен), [] = удался, но записей нет.
+  const userGameHistory = ref<GameHistoryEntry[] | null>(null)
+
+  async function loadUserGameHistory(userName: string) {
+    try {
+      const all = await request('/api/games/history/global')
+      userGameHistory.value = Array.isArray(all)
+        ? all.filter((g: GameHistoryEntry) => g.user_name === userName)
+        : []
+    } catch {
+      userGameHistory.value = null
+    }
+  }
+
   return {
     username,
     email,
@@ -233,5 +291,14 @@ export const useAuthStore = defineStore('auth', () => {
     adminCreateReward,
     adminCreateTournament,
     adminDeleteTournament,
+    tournament,
+    tournamentLoading,
+    loadTournament,
+    leaderboardLive,
+    leaderboardTop,
+    leaderboardLoading,
+    loadLeaderboard,
+    userGameHistory,
+    loadUserGameHistory,
   }
 })

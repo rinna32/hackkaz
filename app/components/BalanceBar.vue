@@ -3,18 +3,25 @@ import { useGameStore } from '~/stores/game'
 import { useAuthStore } from '~/stores/auth'
 import PixelButton from '~/components/ui/PixelButton.vue'
 import AuthModal from '~/components/ui/AuthModal.vue'
+import TopUpModal from '~/components/ui/TopUpModal.vue'
 
 const store = useGameStore()
 const auth = useAuthStore()
 const authOpen = ref(false)
+const topUpOpen = ref(false)
 
 defineProps<{ showTopUp?: boolean; showRules?: boolean }>()
 const emit = defineEmits<{ rules: [] }>()
 
 const padded = computed(() => String(store.balance).padStart(5, '0'))
 
+const colorMode = useColorMode()
+function toggleColorMode() {
+  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
+}
+
 function onAuthClick() {
-  if (auth.loggedIn) store.openAccount()
+  if (auth.loggedIn) navigateTo('/account')
   else authOpen.value = true
 }
 </script>
@@ -33,11 +40,20 @@ function onAuthClick() {
         <span class="text-[11px] tracking-wide text-ink-dim">БОНУСЫ</span>
         <span class="text-xl font-bold text-yellow">{{ padded }}</span>
       </div>
-      <PixelButton v-if="showTopUp" size="sm" variant="ghost" data-testid="topup" @click="store.topUp()">
+      <PixelButton size="sm" variant="ghost" data-testid="color-mode-btn" @click="toggleColorMode">
+        {{ colorMode.value === 'dark' ? '☀️' : '🌙' }}
+      </PixelButton>
+      <PixelButton v-if="showTopUp" size="sm" variant="ghost" data-testid="topup" @click="topUpOpen = true">
         + Пополнить
       </PixelButton>
       <PixelButton v-if="showRules" size="sm" variant="ghost" data-testid="rules-btn" @click="emit('rules')">
         ?
+      </PixelButton>
+      <PixelButton size="sm" variant="ghost" data-testid="tournament-btn" @click="navigateTo('/tournament')">
+        🏆 Турнир
+      </PixelButton>
+      <PixelButton size="sm" variant="ghost" data-testid="leaderboard-btn" @click="navigateTo('/leaderboard')">
+        🏅 Лидеры
       </PixelButton>
       <PixelButton size="sm" variant="ghost" data-testid="auth-btn" @click="onAuthClick">
         {{ auth.loggedIn ? `👤 ${auth.username}` : 'Войти' }}
@@ -47,12 +63,13 @@ function onAuthClick() {
         size="sm"
         variant="danger"
         data-testid="admin-btn"
-        @click="store.openAdmin()"
+        @click="navigateTo('/admin')"
       >
         ⚙ Админка
       </PixelButton>
     </div>
 
     <AuthModal :open="authOpen" @close="authOpen = false" />
+    <TopUpModal :open="topUpOpen" @close="topUpOpen = false" />
   </div>
 </template>

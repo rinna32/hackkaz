@@ -8,7 +8,14 @@ export default defineNuxtConfig({
   // Игра работает целиком на клиенте: Canvas, таймеры, localStorage, WebAudio (позже).
   ssr: false,
 
-  modules: ['@pinia/nuxt'],
+  modules: ['@pinia/nuxt', '@nuxtjs/color-mode'],
+
+  // Тёмная тема — оформление игры по умолчанию; светлая доступна переключателем.
+  colorMode: {
+    preference: 'dark',
+    fallback: 'dark',
+    classSuffix: '',
+  },
 
   vite: {
     plugins: [tailwindcss()],

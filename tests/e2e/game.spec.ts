@@ -116,8 +116,10 @@ test.describe('Воздушный Шар — игровой цикл', () => {
     await expect(page.getByTestId('toast')).toContainText('Не хватает')
     await expect(page.getByTestId('start-btn')).toBeDisabled()
 
-    // Пополнить (+500) → 530, теперь f1 доступен
+    // Пополнить (мок-модалка: карта + сумма по умолчанию 500) → 530, теперь f1 доступен
     await page.getByTestId('topup').click()
+    await page.getByTestId('topup-card').fill('4111111111111111')
+    await page.getByTestId('topup-submit').click()
     await expect(page.getByTestId('balance')).toHaveText(/00530/)
     await page.getByTestId('bet-f1').click()
     await expect(page.getByTestId('bet-f1')).toHaveClass(/selected/)

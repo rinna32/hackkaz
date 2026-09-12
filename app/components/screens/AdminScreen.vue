@@ -46,7 +46,7 @@ function formatDate(s: string) {
           <button
             class="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent text-sm text-ink-dim"
             data-testid="admin-back"
-            @click="store.closeAdmin()"
+            @click="navigateTo('/')"
           >
             ← Назад
           </button>
@@ -166,8 +166,8 @@ function formatDate(s: string) {
           <div v-if="auth.adminRewards.length === 0" class="py-4 text-center text-sm text-ink-dim">Нет наград</div>
           <div v-else class="mb-3 flex flex-col gap-2">
             <div
-              v-for="r in auth.adminRewards"
-              :key="r.id"
+              v-for="(r, i) in auth.adminRewards"
+              :key="`${r.user_name}-${r.name}-${r.id || i}`"
               class="flex items-center justify-between gap-2 border-2 border-shadow bg-panel-2 px-3 py-2"
             >
               <div class="flex flex-col leading-tight">
