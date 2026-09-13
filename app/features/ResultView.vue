@@ -104,10 +104,10 @@ onBeforeUnmount(clearIdle)
 
         <div class="flex flex-col gap-2">
           <AppButton block size="lg" data-testid="again-btn" @click="store.playAgain()">
-            Играть снова
+            Повторить ту же ставку
           </AppButton>
           <AppButton variant="ghost" block data-testid="repeat-btn" @click="store.repeatSame()">
-            Повторить ту же ставку
+            Играть снова
           </AppButton>
         </div>
         <div class="mt-3 text-xs text-muted">Автовозврат через {{ secondsLeft }} с</div>
