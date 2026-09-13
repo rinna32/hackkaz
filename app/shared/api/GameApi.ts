@@ -39,6 +39,26 @@ export interface GameApi {
    * Пишет раунд в историю. Идемпотентна по roundId.
    */
   finalizeRound(roundId: string): Promise<RoundResult>
+
+  /** Текущий прогресс сбора пазла: сколько фрагментов из 4 собрано. */
+  getPuzzle(): Promise<PuzzleState>
+
+  /**
+   * Выдаёт РОВНО ОДИН фрагмент пазла (за сыгранную игру). Когда собрано 4 —
+   * начисляет награду и сбрасывает коллекцию (completed=true, bonus>0).
+   */
+  awardPuzzlePiece(): Promise<PuzzleAward>
+}
+
+export interface PuzzleState {
+  collected: number
+  total: number
+}
+
+export interface PuzzleAward extends PuzzleState {
+  piece: number
+  completed: boolean
+  bonus: number
 }
 
 export class InsufficientBalanceError extends Error {

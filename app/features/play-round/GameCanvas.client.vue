@@ -2,11 +2,13 @@
 import { useGameStore } from '~/stores/game'
 import { THEME_PALETTES } from '~/entities/balloon/palette'
 import {
-  BALLOON_SCREEN,
+  BALLOON_X,
   Explosion,
   VH,
   VW,
+  balloonScreenY,
   drawScene,
+  drawLevelLabels,
   makeClouds,
   type Cloud,
   type SceneState,
@@ -90,7 +92,7 @@ function frame(ts: number) {
 
   // Взрыв при крахе
   if (crashed && !explosionSpawned) {
-    explosion.spawn(BALLOON_SCREEN.x, BALLOON_SCREEN.y - 20, pal, Math.random)
+    explosion.spawn(BALLOON_X, balloonScreenY(store.baseMultiplier, store.round?.levels ?? []) - 20, pal, Math.random)
     explosionSpawned = true
     if (!reducedMotion) shakeUntil = ts + 320
   }
@@ -112,6 +114,8 @@ function frame(ts: number) {
       dy = (Math.random() - 0.5) * 6 * scale
     }
     ctx.drawImage(offscreen, dx, dy, canvas.width, canvas.height)
+    // Номера уровней — чётким текстом поверх (не пиксельным апскейлом).
+    drawLevelLabels(ctx, state, scale, dx, dy)
   }
 }
 

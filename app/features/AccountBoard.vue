@@ -5,6 +5,7 @@ import AppButton from '~/shared/ui/AppButton.vue'
 
 const store = useGameStore()
 const auth = useAuthStore()
+const gameApi = useGameApi()
 
 const myHistory = computed(() => store.history.filter((h) => h.isSelf))
 
@@ -12,8 +13,23 @@ const myHistory = computed(() => store.history.filter((h) => h.isSelf))
 // показываем локальную историю раундов этого шара как есть.
 const useBackendHistory = computed(() => (auth.userGameHistory?.length ?? 0) > 0)
 
+// Прогресс сбора пазла — фактическая коллекция фрагментов (0..4, сбрасывается
+// после сборки). Именно она — источник правды для «Собрано X из 4».
+const puzzleTotal = ref(4)
+const puzzleCollected = ref(0)
+
+const refreshPuzzle = async () => {
+  const p = await gameApi.getPuzzle()
+  puzzleCollected.value = p.collected
+  puzzleTotal.value = p.total
+}
+
 onMounted(() => {
-  if (auth.username) auth.loadUserGameHistory(auth.username)
+  if (auth.username) {
+    auth.loadUserGameHistory(auth.username)
+    auth.loadUserRewards(auth.username)
+  }
+  refreshPuzzle()
 })
 
 const formatDate = (ts: number | string) => {
@@ -46,6 +62,36 @@ const logout = () => {
         <div class="text-xl font-extrabold" data-testid="account-username">{{ auth.username }}</div>
         <div v-if="auth.email" class="text-xs text-muted">{{ auth.email }}</div>
         <AppButton variant="ghost" size="sm" data-testid="account-logout" @click="logout">Выйти</AppButton>
+      </div>
+
+      <!-- Прогресс пазла (= награды игрока с бэка) -->
+      <div class="card p-4" data-testid="account-puzzle">
+        <div class="mb-3 flex items-baseline justify-between">
+          <span class="flex items-center gap-2 text-sm font-semibold text-muted">
+            Пазл
+            <span
+              class="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent-deep"
+              data-testid="account-rewards-count"
+              title="Кол-во наград"
+            >
+              🧩 {{ auth.userRewards.length }}
+            </span>
+          </span>
+          <span class="text-sm font-bold">
+            Собрано <span class="text-accent-deep">{{ puzzleCollected }}</span> из {{ puzzleTotal }}
+          </span>
+        </div>
+        <div class="flex gap-2">
+          <img
+            v-for="i in puzzleTotal"
+            :key="i"
+            :src="`/img/pazle${i}.png`"
+            :alt="`Фрагмент ${i}`"
+            class="h-12 w-12 object-contain transition-all"
+            :class="i <= puzzleCollected ? '' : 'opacity-25 grayscale'"
+          />
+        </div>
+        <p class="mt-2 text-xs text-muted">За каждую сыгранную игру — один фрагмент. Собери все 4 и получи награду.</p>
       </div>
 
       <!-- История игр -->

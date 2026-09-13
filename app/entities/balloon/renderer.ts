@@ -5,12 +5,37 @@ import { drawBalloon, drawBooster, drawCloud } from './sprites'
 export const VW = 340
 export const VH = 340
 
-const BASE_SCREEN_Y = Math.round(VH * 0.68) // экранная позиция шара (камера следует за ним)
-const LOG_SCALE = 90 // пикселей на единицу ln(коэффициента)
+const BASE_SCREEN_Y = Math.round(VH * 0.68) // шар зафиксирован здесь, камера скроллит
+const LEVEL_GAP = 46 // равномерный шаг между уровнями в мировых пикселях
 
-/** Мировая координата (px вверх от m=1) для коэффициента. */
-function yForMultiplier(m: number): number {
-  return LOG_SCALE * Math.log(Math.max(1, m))
+/**
+ * Мировая координата (px вверх от m=1). Кусочно-линейная по индексу уровня:
+ * уровень i находится на (i+1)*LEVEL_GAP, поэтому шаг между линиями одинаковый,
+ * а камера скроллит за шаром — уровни появляются постепенно по мере подъёма.
+ */
+function worldY(m: number, levels: number[]): number {
+  if (levels.length === 0) return Math.max(0, m - 1) * LEVEL_GAP
+  let prevM = 1
+  let prevY = 0
+  for (let i = 0; i < levels.length; i++) {
+    const curM = levels[i]!
+    const curY = (i + 1) * LEVEL_GAP
+    if (m <= curM) {
+      const span = curM - prevM || 1
+      return prevY + ((m - prevM) / span) * (curY - prevY)
+    }
+    prevM = curM
+    prevY = curY
+  }
+  const li = levels.length - 1
+  const prevPrevM = li > 0 ? levels[li - 1]! : 1
+  const slope = LEVEL_GAP / ((levels[li]! - prevPrevM) || 1)
+  return prevY + (m - levels[li]!) * slope
+}
+
+/** Шар всегда на BASE_SCREEN_Y (камера следует за ним). */
+export function balloonScreenY(_m?: number, _levels?: number[]): number {
+  return BASE_SCREEN_Y
 }
 
 export interface Cloud {
@@ -31,12 +56,12 @@ export interface SceneState {
   crashed: boolean
 }
 
-/** Генерация набора облаков для фона. */
+/** Генерация набора облаков для фона (worldY в тех же пикселях, что и уровни). */
 export function makeClouds(rand: () => number): Cloud[] {
   const clouds: Cloud[] = []
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     clouds.push({
-      worldY: yForMultiplier(1) + i * 70 + rand() * 40,
+      worldY: i * 90 + rand() * 60,
       x: 10 + rand() * (VW - 40),
       scale: rand() < 0.5 ? 2 : 3,
     })
@@ -62,9 +87,10 @@ export function drawScene(ctx: CanvasRenderingContext2D, st: SceneState) {
   ctx.imageSmoothingEnabled = false
   skyGradient(ctx, st.pal)
 
-  const curY = yForMultiplier(st.baseMultiplier)
+  const n = st.levels.length
+  const curY = worldY(st.baseMultiplier, st.levels)
 
-  // Облака (параллакс — уходят вниз по мере набора высоты)
+  // Облака — параллакс относительно подъёма.
   for (const c of st.clouds) {
     const screenY = BASE_SCREEN_Y - (c.worldY - curY) * 0.6
     if (screenY > -20 && screenY < VH + 20) {
@@ -72,39 +98,68 @@ export function drawScene(ctx: CanvasRenderingContext2D, st: SceneState) {
     }
   }
 
-  // Уровни (горизонтальные линии + маркеры слева)
-  ctx.font = '700 8px ui-sans-serif, system-ui, sans-serif'
+  // Уровни — пунктирные линии + плашка с коэффициентом; появляются постепенно
+  // по мере подъёма (камера скроллит за шаром).
+  ctx.font = '700 9px ui-sans-serif, system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  for (let i = 0; i < st.levels.length; i++) {
+  const LABEL_W = 26
+  for (let i = 0; i < n; i++) {
     const t = st.levels[i]!
-    const screenY = Math.round(BASE_SCREEN_Y - (yForMultiplier(t) - curY))
+    const screenY = Math.round(BASE_SCREEN_Y - (worldY(t, st.levels) - curY))
     if (screenY < -10 || screenY > VH + 10) continue
     const passed = st.baseMultiplier >= t
     const isBooster = st.boosterLevel === i
     const col = isBooster ? st.pal.lineHot : passed ? st.pal.line : 'rgba(255,255,255,0.45)'
-    // пунктир
-    for (let x = 24; x < VW - 4; x += 8) {
-      ctx.fillStyle = col
-      ctx.fillRect(x, screenY, 4, 1)
-    }
-    // маркер уровня
-    ctx.fillStyle = passed ? st.pal.lineHot : 'rgba(0,0,0,0.35)'
-    ctx.fillRect(2, screenY - 5, 20, 10)
-    ctx.fillStyle = passed ? '#2a1a05' : '#ffffff'
-    ctx.fillText(`${t.toFixed(1)}`, 4, screenY + 1)
 
-    // маркер бустера
+    // пунктир от плашки до правого края
+    for (let x = LABEL_W + 8; x < VW - 8; x += 10) {
+      ctx.fillStyle = col
+      ctx.fillRect(x, screenY, 5, 1)
+    }
+    // плашка уровня (число рисуется отдельно, чётко — см. drawLevelLabels)
+    ctx.fillStyle = passed || isBooster ? st.pal.lineHot : 'rgba(0,0,0,0.35)'
+    ctx.fillRect(2, screenY - 6, LABEL_W, 12)
+
+    // маркер бустера справа
     if (isBooster) {
       drawBooster(ctx, VW - 20, screenY - 12, st.boosterTier, st.boosterActive)
     }
   }
 
-  // Шар (камера держит его на BASE_SCREEN_Y)
+  // Шар зафиксирован по центру, камера следует за ним.
   if (!st.crashed) {
     const sway = Math.sin(st.swayT * 2) * 3
     drawBalloon(ctx, VW / 2, BASE_SCREEN_Y, st.pal, sway)
   }
+}
+
+/**
+ * Номера уровней рисуются ОТДЕЛЬНО на видимом холсте (в его нативном разрешении),
+ * а не на пиксельном оффскрине — иначе текст размывается при масштабировании.
+ * scale = display.width / VW; dx/dy — смещение тряски, совпадающее с блитом сцены.
+ */
+export function drawLevelLabels(
+  ctx: CanvasRenderingContext2D,
+  st: SceneState,
+  scale: number,
+  dx = 0,
+  dy = 0,
+) {
+  const curY = worldY(st.baseMultiplier, st.levels)
+  ctx.save()
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.font = `700 ${Math.round(10 * scale)}px ui-sans-serif, system-ui, sans-serif`
+  for (let i = 0; i < st.levels.length; i++) {
+    const t = st.levels[i]!
+    const screenY = BASE_SCREEN_Y - (worldY(t, st.levels) - curY)
+    if (screenY < -10 || screenY > VH + 10) continue
+    const passed = st.baseMultiplier >= t || st.boosterLevel === i
+    ctx.fillStyle = passed ? '#2a1a05' : '#ffffff'
+    ctx.fillText(`${(i + 1).toFixed(1)}`, 5 * scale + dx, screenY * scale + dy)
+  }
+  ctx.restore()
 }
 
 /** Система частиц взрыва шара. */
@@ -163,4 +218,4 @@ export class Explosion {
   }
 }
 
-export const BALLOON_SCREEN = { x: VW / 2, y: BASE_SCREEN_Y }
+export const BALLOON_X = VW / 2

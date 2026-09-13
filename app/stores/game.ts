@@ -10,6 +10,7 @@ import type {
 } from '~/shared/types/game'
 import { InsufficientBalanceError } from '~/shared/api/GameApi'
 import { displayedMultiplier, levelsCrossed, multiplierAt } from '~/shared/lib/game/engine'
+import { useMinigameStore } from '~/stores/minigame'
 
 export type Screen = 'bet' | 'game' | 'result'
 export type Phase = 'idle' | 'flying' | 'crashed'
@@ -23,8 +24,9 @@ const ONBOARD_KEY = 'balloon:onboarded'
 
 export const useGameStore = defineStore('game', () => {
   const api = useGameApi()
+  // Бэкенд мини-игровых сессий (как во второй игре): старт/финиш + лидерборд.
+  const minigame = useMinigameStore()
 
-  // --- базовое состояние ---
   const config = ref<GameConfig | null>(null)
   const balance = ref(0)
   const history = ref<HistoryItem[]>([])
@@ -33,7 +35,6 @@ export const useGameStore = defineStore('game', () => {
   const selectedBetId = ref<string | null>(null)
   const ready = ref(false)
 
-  // --- состояние раунда ---
   const round = ref<Round | null>(null)
   const phase = ref<Phase>('idle')
   const elapsedMs = ref(0)
@@ -50,8 +51,10 @@ export const useGameStore = defineStore('game', () => {
   let cashoutPending = false
   let floaterSeq = 0
   let toastTimer: ReturnType<typeof setTimeout> | null = null
+  // Бэкенд-сессия текущего раунда (для отправки счёта на сервер).
+  let sessionId = ''
+  let sessionSecret = ''
 
-  // --- производные ---
   const themeConfig = computed(() => config.value?.themes[theme.value] ?? null)
   const betOptions = computed<BetOption[]>(() => config.value?.betOptions ?? [])
   const selectedBet = computed(
@@ -86,7 +89,6 @@ export const useGameStore = defineStore('game', () => {
     () => phase.value === 'flying' && cashoutInfo.value === null,
   )
 
-  // --- инициализация ---
   async function init() {
     config.value = await api.getConfig()
     balance.value = await api.getBalance()
@@ -129,7 +131,6 @@ export const useGameStore = defineStore('game', () => {
     showToast('Баланс пополнен')
   }
 
-  // --- жизненный цикл раунда ---
   async function startRound(): Promise<boolean> {
     const opt = selectedBet.value
     if (!opt) return false
@@ -141,7 +142,17 @@ export const useGameStore = defineStore('game', () => {
       const r = await api.createRound(theme.value, opt.id)
       round.value = r
       balance.value = await api.getBalance()
-      // сброс состояния полёта
+      // Открываем игровую сессию на бэкенде (как во второй игре). Если бэкенд
+      // недоступен — раунд всё равно играется на локальном движке.
+      sessionId = ''
+      sessionSecret = ''
+      try {
+        const s = await minigame.startSession()
+        sessionId = s.session_id
+        sessionSecret = s.secret
+      } catch {
+        /* играем локально, счёт на сервер не уйдёт */
+      }
       phase.value = 'flying'
       elapsedMs.value = 0
       baseMultiplier.value = config.value?.startMultiplier ?? 1
@@ -248,21 +259,38 @@ export const useGameStore = defineStore('game', () => {
     phase.value = 'crashed'
     if (!round.value) return
     const id = round.value.id
+    let bonus = 0
     try {
       const res = await api.finalizeRound(id)
       result.value = res
+      bonus = res.puzzleBonus
       await refreshBalance()
       await refreshHistory()
+      // Отправляем счёт раунда на бэкенд (очки за раунд) и обновляем лидерборд.
+      if (sessionId) {
+        try {
+          await minigame.finishSession(sessionId, sessionSecret, res.points)
+          await minigame.loadLeaderboard()
+        } catch {
+          /* сервер недоступен — счёт остаётся только локально */
+        } finally {
+          sessionId = ''
+          sessionSecret = ''
+        }
+      }
     } catch {
       /* ignore */
     }
     // Даём проиграться анимации взрыва, затем экран результата
     setTimeout(() => {
       if (phase.value === 'crashed') screen.value = 'result'
+      // Алерт о собранном пазле — после перехода на экран результата.
+      if (bonus > 0) {
+        window.alert(`Пазл собран! Вы получили все 4 фрагмента. Награда +${bonus} бонусов начислена.`)
+      }
     }, 1100)
   }
 
-  // --- переходы с экрана результата ---
   function playAgain() {
     resetRound()
     screen.value = 'bet'
@@ -291,7 +319,6 @@ export const useGameStore = defineStore('game', () => {
   }
 
   return {
-    // state
     config,
     balance,
     history,
@@ -309,7 +336,6 @@ export const useGameStore = defineStore('game', () => {
     floaters,
     toast,
     showOnboarding,
-    // getters
     themeConfig,
     betOptions,
     selectedBet,
@@ -318,7 +344,6 @@ export const useGameStore = defineStore('game', () => {
     boosterActive,
     liveWinnings,
     canCashout,
-    // actions
     init,
     refreshBalance,
     refreshHistory,

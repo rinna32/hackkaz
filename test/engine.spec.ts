@@ -66,8 +66,8 @@ describe('generateCrashPoint', () => {
     for (let i = 0; i < N; i++) {
       if (generateCrashPoint(p.nextOpen(), cfg) > 2) above2++
     }
-    // Теоретически P(crash>2) = (1/2)^alpha ≈ 0.45 при alpha=1.15
-    const expected = Math.pow(1 / 2, cfg.alpha)
+    // Теоретически P(crash>x) = (minCrash / x)^alpha
+    const expected = Math.pow(cfg.minCrashMultiplier / 2, cfg.alpha)
     expect(above2 / N).toBeGreaterThan(expected - 0.05)
     expect(above2 / N).toBeLessThan(expected + 0.05)
   })

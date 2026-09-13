@@ -25,8 +25,7 @@ export interface AdminReward {
   claimed: boolean
 }
 export interface AdminTournament {
-  // Бэкенд отдаёт поле как "ID" (как и в main.User), несмотря на "id" в swagger-схеме.
-  ID: number
+  ID: string // UUID
   name: string
   ends_at: string
 }
@@ -34,12 +33,58 @@ export interface LeaderboardEntry {
   user_name: string
   score: number
 }
+// Конфигурация игры — /api/admin/game_config (структура зеркалит бэкенд-Config).
+export interface GameConfigData {
+  game_duration: number
+  max_score: number
+  min_play_time: number
+  reward_name: string
+  bonus_every: number
+  bonus_score: number
+  reward_chance: number
+  bonus_reward_chance: number
+  enable_rewards: boolean
+  enable_bonuses: boolean
+  allow_replay: boolean
+  max_games_per_day: number
+  score_multiplier: number
+}
 export interface GameHistoryEntry {
   id: string
   user_name: string
   score: number
   played_at: string
 }
+
+// Бэкенд отдаёт поля в разном регистре (ID + snake_case, где-то PascalCase).
+// Нормализуем ответы админки, чтобы UI не падал и всё отображалось стабильно.
+const pick = (o: any, ...keys: string[]): any => {
+  for (const k of keys) if (o && o[k] != null) return o[k]
+  return undefined
+}
+const normUser = (u: any): AdminUser => ({
+  ID: pick(u, 'ID', 'id') ?? 0,
+  UserName: pick(u, 'UserName', 'user_name', 'username', 'name') ?? '',
+  UserEmail: pick(u, 'UserEmail', 'user_email', 'email') ?? '',
+  UserRole: pick(u, 'UserRole', 'user_role', 'role') ?? 'user',
+})
+const normTournament = (t: any): AdminTournament => ({
+  ID: String(pick(t, 'ID', 'id') ?? ''),
+  name: pick(t, 'name', 'Name') ?? '',
+  ends_at: pick(t, 'ends_at', 'endsAt', 'EndsAt', 'endedAt', 'ended_at', 'EndedAt') ?? '',
+})
+const normReward = (r: any): AdminReward => ({
+  id: String(pick(r, 'id', 'ID') ?? ''),
+  name: pick(r, 'name', 'Name') ?? '',
+  user_name: pick(r, 'user_name', 'UserName', 'username') ?? '',
+  claimed: Boolean(pick(r, 'claimed', 'Claimed')),
+})
+const normGame = (g: any): AdminGame => ({
+  id: String(pick(g, 'id', 'ID') ?? ''),
+  user_name: pick(g, 'user_name', 'UserName', 'username') ?? '',
+  score: Number(pick(g, 'score', 'Score') ?? 0),
+  played_at: pick(g, 'played_at', 'playedAt', 'PlayedAt') ?? '',
+})
 
 export const useAuthStore = defineStore('auth', () => {
   const username = ref<string | null>(null)
@@ -164,24 +209,83 @@ export const useAuthStore = defineStore('auth', () => {
   const adminLoading = ref(false)
   const adminError = ref<string | null>(null)
 
+  // Кол-во наград (пазлов) на каждого пользователя — GET /api/rewards?username=
+  // Бэкенд отдаёт только по одному username за раз, поэтому бьём список
+  // пользователей на отдельные запросы (allSettled: один упавший не рушит остальные).
+  const adminUserRewardCounts = ref<Record<string, number>>({})
+
+  async function loadAdminUserRewardCounts(userNames: string[]) {
+    const results = await Promise.allSettled(
+      userNames.map((name) => request(`/api/rewards?username=${encodeURIComponent(name)}`)),
+    )
+    const counts: Record<string, number> = {}
+    results.forEach((res, i) => {
+      const name = userNames[i]!
+      counts[name] = res.status === 'fulfilled' && Array.isArray(res.value) ? res.value.length : 0
+    })
+    adminUserRewardCounts.value = counts
+  }
+
+  // --- конфиг игры (/api/admin/game_config) ---
+  const adminGameConfig = ref<GameConfigData | null>(null)
+  const adminGameConfigLoading = ref(false)
+  const adminGameConfigError = ref<string | null>(null)
+  const adminGameConfigSaving = ref(false)
+
+  async function loadGameConfig() {
+    adminGameConfigLoading.value = true
+    adminGameConfigError.value = null
+    try {
+      adminGameConfig.value = await request('/api/admin/game_config')
+    } catch (err) {
+      adminGameConfigError.value = err instanceof Error ? err.message : 'Не удалось загрузить конфиг'
+    } finally {
+      adminGameConfigLoading.value = false
+    }
+  }
+
+  async function adminUpdateGameConfig(patch: GameConfigData) {
+    adminGameConfigSaving.value = true
+    adminGameConfigError.value = null
+    try {
+      adminGameConfig.value = await request('/api/admin/game_config', {
+        method: 'PUT',
+        body: JSON.stringify(patch),
+      })
+    } catch (err) {
+      adminGameConfigError.value = err instanceof Error ? err.message : 'Не удалось сохранить конфиг'
+      throw err
+    } finally {
+      adminGameConfigSaving.value = false
+    }
+  }
+
   async function loadAdminData() {
     adminLoading.value = true
     adminError.value = null
-    try {
-      const [users, games, rewards, tournaments] = await Promise.all([
-        request('/api/admin/users'),
-        request('/api/admin/games'),
-        request('/api/admin/rewards'),
-        request('/api/admin/tournaments'),
-      ])
-      adminUsers.value = users ?? []
-      adminGames.value = games ?? []
-      adminRewards.value = rewards ?? []
-      adminTournaments.value = tournaments ?? []
-    } catch (e) {
-      adminError.value = e instanceof Error ? e.message : 'Не удалось загрузить данные'
-    } finally {
-      adminLoading.value = false
+    // allSettled: неудача одного эндпоинта не обнуляет остальные секции.
+    // Турниры берём из публичного /api/tournament (там их отдаёт GetTournaments).
+    const [users, games, rewards, tournaments] = await Promise.allSettled([
+      request('/api/admin/users'),
+      request('/api/admin/games'),
+      request('/api/admin/rewards'),
+      request('/api/tournament'),
+    ])
+    const toArray = (v: any) => (Array.isArray(v) ? v : v ? [v] : [])
+    adminUsers.value = users.status === 'fulfilled' ? toArray(users.value).map(normUser) : []
+    adminGames.value = games.status === 'fulfilled' ? toArray(games.value).map(normGame) : []
+    adminRewards.value = rewards.status === 'fulfilled' ? toArray(rewards.value).map(normReward) : []
+    adminTournaments.value =
+      tournaments.status === 'fulfilled' ? toArray(tournaments.value).map(normTournament) : []
+    if (users.status === 'rejected') {
+      adminError.value = users.reason instanceof Error ? users.reason.message : 'Не удалось загрузить данные'
+    }
+    adminLoading.value = false
+    // Конфиг — отдельный запрос: его неудача не должна ронять остальную панель.
+    void loadGameConfig()
+    // Кол-во наград по каждому пользователю — тоже отдельно и не блокирует остальное.
+    if (adminUsers.value.length > 0) {
+      void loadAdminUserRewardCounts(adminUsers.value.map((u) => u.UserName))
     }
   }
 
@@ -206,16 +310,17 @@ export const useAuthStore = defineStore('auth', () => {
     await loadAdminData()
   }
 
-  async function adminCreateTournament(name: string, endsAt: string) {
+  // Бэкенд ждёт CreateTournamentRequest = { name, startedAt, endedAt } (camelCase).
+  async function adminCreateTournament(name: string, startedAt: string, endedAt: string) {
     await request('/api/admin/tournaments', {
       method: 'POST',
-      body: JSON.stringify({ name, ends_at: endsAt }),
+      body: JSON.stringify({ name, startedAt, endedAt }),
     })
     await loadAdminData()
   }
 
-  async function adminDeleteTournament(id: number) {
-    await request(`/api/admin/tournaments/${id}`, { method: 'DELETE' })
+  async function adminDeleteTournament(id: string) {
+    await request(`/api/admin/tournaments/${encodeURIComponent(id)}`, { method: 'DELETE' })
     await loadAdminData()
   }
 
@@ -228,8 +333,9 @@ export const useAuthStore = defineStore('auth', () => {
     tournamentLoading.value = true
     try {
       const data = await request('/api/tournament')
-      // Бэкенд может вернуть массив либо (исторически) один объект — нормализуем в список.
-      tournaments.value = Array.isArray(data) ? data : data ? [data] : []
+      // Бэкенд может вернуть массив либо один объект — нормализуем в список.
+      const list = Array.isArray(data) ? data : data ? [data] : []
+      tournaments.value = list.map(normTournament)
     } catch {
       tournaments.value = []
     } finally {
@@ -238,20 +344,19 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // --- таблица лидеров: реальные игроки из БД (публично, без токена) ---
-  const leaderboardLive = ref<LeaderboardEntry[]>([])
   const leaderboardTop = ref<LeaderboardEntry[]>([])
   const leaderboardLoading = ref(false)
 
-  /** Оба запроса независимы: если один недоступен, второй всё равно отобразится. */
   async function loadLeaderboard() {
     leaderboardLoading.value = true
-    const [live, top] = await Promise.allSettled([
-      request('/api/tournament/live'),
-      request('/api/tournament/top'),
-    ])
-    leaderboardLive.value = live.status === 'fulfilled' ? live.value ?? [] : []
-    leaderboardTop.value = top.status === 'fulfilled' ? top.value ?? [] : []
-    leaderboardLoading.value = false
+    try {
+      const top = await request('/api/tournament/top')
+      leaderboardTop.value = Array.isArray(top) ? top : []
+    } catch {
+      leaderboardTop.value = []
+    } finally {
+      leaderboardLoading.value = false
+    }
   }
 
   // --- история игр пользователя (публично, без токена) ---
@@ -267,6 +372,18 @@ export const useAuthStore = defineStore('auth', () => {
         : []
     } catch {
       userGameHistory.value = null
+    }
+  }
+
+  // --- награды игрока (GET /api/rewards?username=) ---
+  const userRewards = ref<AdminReward[]>([])
+
+  async function loadUserRewards(userName: string) {
+    try {
+      const data = await request(`/api/rewards?username=${encodeURIComponent(userName)}`)
+      userRewards.value = (Array.isArray(data) ? data : []).map(normReward)
+    } catch {
+      userRewards.value = []
     }
   }
 
@@ -289,6 +406,13 @@ export const useAuthStore = defineStore('auth', () => {
     adminTournaments,
     adminLoading,
     adminError,
+    adminGameConfig,
+    adminGameConfigLoading,
+    adminGameConfigError,
+    adminGameConfigSaving,
+    loadGameConfig,
+    adminUpdateGameConfig,
+    adminUserRewardCounts,
     loadAdminData,
     adminChangeRole,
     adminDeleteUser,
@@ -298,11 +422,12 @@ export const useAuthStore = defineStore('auth', () => {
     tournaments,
     tournamentLoading,
     loadTournament,
-    leaderboardLive,
     leaderboardTop,
     leaderboardLoading,
     loadLeaderboard,
     userGameHistory,
     loadUserGameHistory,
+    userRewards,
+    loadUserRewards,
   }
 })

@@ -7,7 +7,7 @@ import type {
   ThemeId,
 } from '~/shared/types/game'
 import { DEFAULT_CONFIG } from '~/shared/config/game.config'
-import type { GameApi } from '~/shared/api/GameApi'
+import type { GameApi, PuzzleState, PuzzleAward } from '~/shared/api/GameApi'
 import { InsufficientBalanceError } from '~/shared/api/GameApi'
 import {
   boosterTriggered,
@@ -155,6 +155,23 @@ export class MockGameApi implements GameApi {
     }
   }
 
+  /** Начисляет один фрагмент пазла (без сетевой задержки). Общая логика награды. */
+  private grantPuzzlePiece(): PuzzleAward {
+    const owned = this.readPieces()
+    const piece = owned.length % 4 // следующий фрагмент по порядку 0→3
+    let pieces = [...owned, piece]
+    let bonus = 0
+    let completed = false
+    if (pieces.length >= 4) {
+      completed = true
+      bonus = PUZZLE_BONUS
+      this.setNum(KEY.balance, this.num(KEY.balance, 0) + bonus)
+      pieces = [] // пазл собран — начинаем новый
+    }
+    this.kv.set(KEY.pieces, JSON.stringify(pieces))
+    return { piece, collected: pieces.length, total: 4, completed, bonus }
+  }
+
   // ---- GameApi ----
 
   async getConfig(): Promise<GameConfig> {
@@ -178,6 +195,16 @@ export class MockGameApi implements GameApi {
   async getHistory(): Promise<HistoryItem[]> {
     await this.delay()
     return this.readHistory()
+  }
+
+  async getPuzzle(): Promise<PuzzleState> {
+    await this.delay()
+    return { collected: this.readPieces().length, total: 4 }
+  }
+
+  async awardPuzzlePiece(): Promise<PuzzleAward> {
+    await this.delay()
+    return this.grantPuzzlePiece()
   }
 
   async createRound(theme: ThemeId, betOptionId: string): Promise<Round> {
@@ -293,18 +320,8 @@ export class MockGameApi implements GameApi {
       rec.cfg,
     )
 
-    // Награда-пазл: детерминированный фрагмент 0..3
-    const piecePrng = createPrng(`${round.id}:piece`)
-    const piece = Math.floor(piecePrng.next() * 4)
-    let pieces = this.readPieces()
-    let puzzleBonus = 0
-    if (!pieces.includes(piece)) pieces.push(piece)
-    if (pieces.length >= 4) {
-      puzzleBonus = PUZZLE_BONUS
-      this.setNum(KEY.balance, this.num(KEY.balance, 0) + puzzleBonus)
-      pieces = [] // собран — начинаем новый пазл
-    }
-    this.kv.set(KEY.pieces, JSON.stringify(pieces))
+    // Награда: ровно ОДИН фрагмент пазла за раунд.
+    const award = this.grantPuzzlePiece()
 
     // Накопительные очки (для будущего рейтинга)
     this.setNum(KEY.points, this.num(KEY.points, 0) + points)
@@ -321,9 +338,9 @@ export class MockGameApi implements GameApi {
       winnings: win ? rec.cashout!.winnings : 0,
       levelsCrossed: crossed,
       points,
-      puzzlePiece: piece,
-      puzzleCollected: pieces.length,
-      puzzleBonus,
+      puzzlePiece: award.piece,
+      puzzleCollected: award.collected,
+      puzzleBonus: award.bonus,
     }
     rec.finalized = result
     this.finalizedResults.set(roundId, result)

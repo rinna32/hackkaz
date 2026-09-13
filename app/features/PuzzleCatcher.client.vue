@@ -36,6 +36,7 @@ let spawnAccumulator = 0
 let lastFrameTime = 0
 let timer: ReturnType<typeof setInterval> | null = null
 let sessionId = ''
+let sessionSecret = ''
 const items: any[] = []
 const particles: any[] = []
 const catcher = { x: 500, y: 300, radius: 34, active: false }
@@ -315,16 +316,28 @@ const beginRound = (duration: number) => {
   render()
 }
 
+const gameApi = useGameApi()
+
 const finishGame = async () => {
+  if (gameOver.value) return // защита от повторного вызова (таймер + жизни=0)
   running = false
   if (timer) clearInterval(timer)
   gameOver.value = true
   finishStatus.value = 'Сохраняем результат…'
   try {
-    await minigame.finishSession(sessionId, score.value)
+    await minigame.finishSession(sessionId, sessionSecret, score.value)
     finishStatus.value = 'Результат сохранён'
   } catch (err) {
     finishStatus.value = 'Не удалось сохранить: ' + (err instanceof Error ? err.message : '')
+  }
+  // Награда за сыгранную игру — один фрагмент пазла.
+  try {
+    const award = await gameApi.awardPuzzlePiece()
+    if (award.completed) {
+      window.alert(`Пазл собран! Вы получили все 4 фрагмента. Награда +${award.bonus} бонусов начислена.`)
+    }
+  } catch {
+    /* награда-пазл не критична */
   }
   await minigame.loadLeaderboard()
 }
@@ -334,6 +347,7 @@ const startNewSession = async () => {
   try {
     const session = await minigame.startSession()
     sessionId = session.session_id
+    sessionSecret = session.secret
     beginRound(session.duration)
   } catch (err) {
     finishStatus.value = 'Не удалось начать сессию: ' + (err instanceof Error ? err.message : '')
