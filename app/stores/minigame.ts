@@ -13,6 +13,14 @@ export interface MinigameScore {
   user_name: string
   score: number
 }
+// Итог раунда с сервера. Поля отражают админскую «подкрутку»: score уже с
+// учётом ScoreMultiplier/MaxScore, reward_created/bonus_granted — результат
+// EnableRewards/RewardChance/EnableBonuses/BonusEvery.
+export interface MinigameFinish {
+  score: number
+  reward_created: boolean
+  bonus_granted: boolean
+}
 
 export const useMinigameStore = defineStore('minigame', () => {
   const auth = useAuthStore()
@@ -40,12 +48,19 @@ export const useMinigameStore = defineStore('minigame', () => {
   }
 
   // Отправка финального счёта с provably-fair хэшем: SHA256(session_id + score + secret).
-  async function finishSession(sessionId: string, secret: string, score: number): Promise<void> {
+  // Возвращает итог сервера — уже с применённой «подкруткой» (множитель, лимит
+  // очков, награда и бонус за серию).
+  async function finishSession(sessionId: string, secret: string, score: number): Promise<MinigameFinish> {
     const hash = await buildGameHash(sessionId, score, secret)
-    await request('/api/minigame/finish', {
+    const res = await request('/api/minigame/finish', {
       method: 'POST',
       body: JSON.stringify({ session_id: sessionId, score, hash }),
     })
+    return {
+      score: Number(res?.score ?? score),
+      reward_created: Boolean(res?.reward_created),
+      bonus_granted: Boolean(res?.bonus_granted),
+    }
   }
 
   async function loadLeaderboard() {

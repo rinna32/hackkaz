@@ -28,6 +28,12 @@ const gameOver = ref(false)
 const finishStatus = ref('')
 const starting = ref(false)
 
+// Итог с сервера (после «подкрутки»): очки с учётом множителя/лимита,
+// выданная награда и бонус за серию. null — пока раунд не завершён.
+const finalScore = ref<number | null>(null)
+const rewardCreated = ref(false)
+const bonusGranted = ref(false)
+
 // Внутреннее состояние цикла (не реактивное — меняется каждый кадр).
 let GAME_DURATION = 30
 let running = false
@@ -323,9 +329,17 @@ const finishGame = async () => {
   running = false
   if (timer) clearInterval(timer)
   gameOver.value = true
+  finalScore.value = null
+  rewardCreated.value = false
+  bonusGranted.value = false
   finishStatus.value = 'Сохраняем результат…'
   try {
-    await minigame.finishSession(sessionId, sessionSecret, score.value)
+    // Сервер применяет админскую «подкрутку» и возвращает итог: очки после
+    // множителя/лимита, факт выдачи награды и бонуса за серию.
+    const res = await minigame.finishSession(sessionId, sessionSecret, score.value)
+    finalScore.value = res.score
+    rewardCreated.value = res.reward_created
+    bonusGranted.value = res.bonus_granted
     finishStatus.value = 'Результат сохранён'
   } catch (err) {
     finishStatus.value = 'Не удалось сохранить: ' + (err instanceof Error ? err.message : '')
@@ -426,8 +440,21 @@ onBeforeUnmount(() => {
         >
           <div class="card w-full max-w-sm p-6 text-center">
             <h2 class="mb-1 text-2xl font-extrabold">Игра окончена</h2>
-            <p class="mb-1 text-lg">Счёт: <b>{{ score }}</b></p>
+            <p class="mb-1 text-lg">
+              Счёт: <b>{{ finalScore ?? score }}</b>
+            </p>
+            <!-- Итог сервера отличается от набранного, если админ включил
+                 множитель очков или лимит («подкрутка»). -->
+            <p v-if="finalScore !== null && finalScore !== score" class="mb-1 text-xs text-muted">
+              Набрано {{ score }} · зачтено {{ finalScore }}
+            </p>
             <p class="mb-2 text-sm text-muted">Лучшее комбо: {{ bestCombo }}</p>
+            <p v-if="rewardCreated" class="mb-1 text-sm font-semibold text-accent-deep">
+              🎁 Награда получена!
+            </p>
+            <p v-if="bonusGranted" class="mb-1 text-sm font-semibold text-accent-deep">
+              ⭐ Бонус за серию начислен!
+            </p>
             <p class="mb-4 text-xs text-muted">{{ finishStatus }}</p>
 
             <div class="mb-4 text-left">
